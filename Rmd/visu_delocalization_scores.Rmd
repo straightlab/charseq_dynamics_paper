@@ -1,0 +1,762 @@
+---
+title: "Visualization :delocalization scores"
+output:
+  rmarkdown::github_document
+---
+
+```{r, include=FALSE, cache=FALSE}
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(ggrastr)
+library(ggpubr)
+# library(ggnewscale)
+# library(ggsci)
+library(readr)
+library(arrow)
+library(here)
+library(paperutils)
+library(cowplot)
+library(ggdist)
+```
+
+# Populate gene info
+
+Load info about genes repeat contents and proximity
+
+
+```{r}
+allgenes <- read_parquet(here('../rdana/genes/data-output/allgenes_final.parquet'))
+exprdata <- read_parquet(here('../rdana/carnas/data-output/expression.rnacharIndep.exonsScaling.Q255Q40.with_unannotated.parquet'))
+
+delocdata <- read_parquet(here('../rdana/cacoarse/data-output/delocalization_scores.exonsModel.parquet'))
+
+```
+
+```{r}
+deloc_df <- delocdata %>%
+  left_join(exprdata %>% dplyr::select(GeneID,annotation_type, FPM.ES.char,FPM.DE.char) %>% 
+              dplyr::rename(FPM_ES = FPM.ES.char, FPM_DE=FPM.DE.char) %>% pivot_longer(-c(GeneID, annotation_type), names_to = "cell", values_to="FPM", names_prefix="FPM_"), by = c("cell", "annotation_type","GeneID")) %>%
+  mutate(deloc_score_type = factor(substr(deloc_score_type, 7, length(deloc_score_type)), levels = c("trans","cis"))) %>%
+  mutate(rna_type = if_else(rna_type=='ncRNA', rna_subtype, rna_type))
+```
+
+```{r}
+deloc_df
+```
+
+
+
+# Densities
+
+```{r}
+plot_deloc_halfeye <- function(deloc){
+p<- deloc %>%
+  ggplot(aes(x=delocalization_score.calibrated, y=rna_type, color=cell))+
+  stat_slab(aes(slab_color=cell), fill=NA, normalize="panels") +
+  stat_pointinterval(point_interval = median_qi, .width = c(.75), interval_size=1, position = position_dodge(width = .2, preserve = "single"))+
+  scale_color_manual(values=c( ES="cornflowerblue", DE="gold3"))+
+  scale_color_manual(aesthetics = "slab_color", values=c( ES="cornflowerblue", DE="gold3"))+
+  geom_vline(aes(xintercept = 0), linetype='dashed', color='black')+
+  labs(x="Trans delocalization\nscore", y=NULL)+
+scale_x_continuous(position = 'top')+
+
+  guides(fill=FALSE, color=FALSE, slab_color=F)+
+  #xlim(c(-4,5))+
+  theme_publish()
+
+return(p)
+}
+
+
+```
+
+```{r, fig.width=8}
+mytypes  <- c(c('mRNA','lncRNA','snRNA','snoRNA'),c("repeat","tRNAderived", "snRNAderived","cre","readthrough","antisense","intergenic"))
+
+mydata <- deloc_df %>% 
+  dplyr::filter(annotation_type %in% c('intergenic', 'exons'), FPM>1, deloc_score_type=='trans', rna_type %in% mytypes) %>%
+  mutate(rna_type = factor(rna_type, levels = rev(mytypes)), cell=factor(cell, levels=c('ES','DE'))) 
+
+p <- plot_deloc_halfeye(mydata) + labs(x="Trans delocalization\nscore", y=NULL)
+fname="delocscore.density.byclass.intergenicANDexons.halfeye.trans.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.5, "in"), height=unit(1.75*12/5, "in"))
+plot_grid(p_fixed)
+ggsave2(here("figures/delocalization", fname), dpi=300)
+```
+
+```{r, fig.width=8}
+mydata <- deloc_df %>% 
+  dplyr::filter(annotation_type %in% c('intergenic', 'exons'), FPM>1, deloc_score_type=='cis', rna_type %in% mytypes) %>%
+  mutate(rna_type = factor(rna_type, levels = rev(mytypes)), cell=factor(cell, levels=c('ES','DE'))) 
+
+p <- plot_deloc_halfeye(mydata) + labs(x="Cis delocalization\nscore", y=NULL)
+fname="delocscore.density.byclass.intergenicANDexons.halfeye.trans.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.5, "in"), height=unit(1.75*12/5, "in"))
+plot_grid(p_fixed)
+ggsave2(here("figures/delocalization", fname), dpi=300)
+```
+
+# Census of delocalized RNAs
+```{r, fig.width=7}
+plot_deloc_significant <- function(deloc){
+ deloc %>%
+  mutate(issig = case_when((p.high.corr<0.05) ~ 'broad', (p.low.corr<0.05) ~ 'tight' , T~'none')) %>%
+  
+  dplyr::count(annotation_type, rna_type, issig, cell) %>%
+  group_by(rna_type, cell, annotation_type) %>%
+  mutate(per = n/ sum(n)*100) %>%
+  ungroup() %>%
+  dplyr::filter(issig!="none") %>%
+  mutate(issig = factor(issig, levels = c("tight","broad"))) %>%
+  complete(crossing(rna_type, issig, cell), fill = list(per = 0)) %>%
+  group_by(cell, rna_type) %>%
+  mutate(per_total = sum(per)) %>%
+  ungroup() %>%
+  mutate(per2 = case_when(issig=="tight" ~ per_total, T ~ per)) %>%
+  mutate(alpha2 = case_when(cell=='ES'~0.2, cell=='DE' ~ 1)) %>%
+  ggplot(aes(x=rna_type, y=per2,  fill=issig, color=cell))+
+    geom_col(data = . %>% dplyr::filter(issig=="tight"), fill='dodgerblue', width=0.8, position  = position_dodge2(padding = 0.2, width = 0.8), alpha=1)+
+  geom_col(data = . %>% dplyr::filter(issig=="broad"), fill='red3', width=0.8, position  = position_dodge2(padding = 0.2, width = 0.8), alpha=1)+
+  
+    scale_color_manual(values=c( ES="cornflowerblue", DE="gold3"))+
+    theme_publish() +
+    #facet_wrap(~cell)+
+    scale_y_continuous(position = 'right', expand = c(0,0)) + 
+  coord_flip()+
+   theme(legend.position = "right", legend.direction = "vertical", axis.text.x = element_text(angle=45, hjust=0)) +
+  #scale_x_discrete(position = 'top')+
+  theme(axis.text.y = element_blank())+
+    labs(x=NULL, y = "Percent of RNAs") -> p
+return(p)
+}
+```
+
+
+## CIS 
+Without lncRNA mRNA
+```{r, fig.width=6}
+mytypes1  <- c(c('snRNA','snoRNA'),c("repeat","tRNAderived", "snRNAderived","cre","readthrough","antisense","intergenic"))
+
+p<- plot_deloc_significant(deloc_df %>% 
+  dplyr::filter(annotation_type %in% c('intergenic', 'exons'), FPM>1, deloc_score_type=='cis', rna_type %in% mytypes1) %>%
+  mutate(rna_type = factor(rna_type, levels = rev(mytypes1)), cell=factor(cell, levels=c('ES','DE')))) 
+  
+
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.2, "in"), height=unit(1.75*10/5, "in"))
+plot_grid(p_fixed)
+
+fname="deloc.CIS.intergenicANDexons.hist.noLncMRNA.pdf"
+ggsave2(here("figures/delocalization", fname), dpi=300)
+
+```
+
+lncRNA mRNA
+```{r, fig.width=6}
+mytypes1  <- c("mRNA","lncRNA")
+
+p<- plot_deloc_significant(deloc_df %>% 
+  dplyr::filter(annotation_type %in% c('intergenic', 'exons'), FPM>1, deloc_score_type=='cis', rna_type %in% mytypes1) %>%
+  mutate(rna_type = factor(rna_type, levels = rev(mytypes1)), cell=factor(cell, levels=c('ES','DE')))) 
+  
+
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.2, "in"), height=unit(1.75*2/5, "in"))
+plot_grid(p_fixed)
+
+fname="deloc.CIS.intergenicANDexons.hist.LncMRNAonly.pdf"
+ggsave2(here("figures/delocalization", fname), dpi=300)
+
+```
+## TRANS 
+Without lncRNA mRNA
+```{r, fig.width=6}
+mytypes1  <- c(c('snRNA','snoRNA'),c("repeat","tRNAderived", "snRNAderived","cre","readthrough","antisense","intergenic"))
+
+p<- plot_deloc_significant(deloc_df %>% 
+  dplyr::filter(annotation_type %in% c('intergenic', 'exons'), FPM>1, deloc_score_type=='trans', rna_type %in% mytypes1) %>%
+  mutate(rna_type = factor(rna_type, levels = rev(mytypes1)), cell=factor(cell, levels=c('ES','DE')))) 
+  
+
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.2, "in"), height=unit(1.75*10/5, "in"))
+plot_grid(p_fixed)
+
+fname="deloc.TRANS.intergenicANDexons.hist.noLncMRNA.pdf"
+ggsave2(here("figures/delocalization", fname), dpi=300)
+
+```
+
+lncRNA mRNA
+```{r, fig.width=6}
+mytypes1  <- c("mRNA","lncRNA")
+
+p<- plot_deloc_significant(deloc_df %>% 
+  dplyr::filter(annotation_type %in% c('intergenic', 'exons'), FPM>1, deloc_score_type=='trans', rna_type %in% mytypes1) %>%
+  mutate(rna_type = factor(rna_type, levels = rev(mytypes1)), cell=factor(cell, levels=c('ES','DE')))) 
+  
+
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.2, "in"), height=unit(1.75*2/5, "in"))
+plot_grid(p_fixed)
+
+fname="deloc.TRANS.intergenicANDexons.hist.LncMRNAonly.pdf"
+ggsave2(here("figures/delocalization", fname), dpi=300)
+
+```
+# Catalog LNCrnas
+
+## Prepare data
+```{r, fig.width=10}
+x<- deloc_df %>% 
+  dplyr::filter(annotation_type %in% c('exons'), FPM>1,  rna_type == 'lncRNA', ambiguous!=2) %>%
+  mutate(cell=factor(cell, levels=c('ES','DE'))) %>%
+
+  
+  left_join(deloc_df %>% 
+  dplyr::filter(annotation_type %in% c('exons'), FPM>1,  rna_type == 'lncRNA', deloc_score_type=='trans') %>% dplyr::select(GeneID, cell, p.high.corr) %>% dplyr::rename(p0 = p.high.corr) ,
+            by=c("GeneID","cell")) %>%
+  group_by(GeneID, cell) %>%
+  mutate(p = min(p.high.corr, na.rm=T), psum=sum(p.high.corr, na.rm = F), np=n()) %>%
+  ungroup() %>%
+  group_by(GeneID) %>%
+  mutate(p2 = min(p, na.rm=T), FPMmean = mean(FPM, na.rm=T)) %>%
+  ungroup() %>%
+  arrange(desc(FPMmean)) %>%
+  dplyr::filter(p2<0.05) #%>% #, !is.nan(psum), np==2)
+ 
+ 
+mygenesBB <- x %>% dplyr::select(GeneID) %>% unique() %>% pull(GeneID)
+
+mygenesBB_top20 <- x %>% dplyr::select(GeneID, FPMmean) %>% unique() %>% arrange(desc(FPMmean)) %>% head(n=30) %>% pull(GeneID)
+
+```
+
+
+
+```{r}
+xtop20 = x %>% 
+  dplyr::filter(GeneID %in% mygenesBB_top20) %>%
+   mutate(GeneID = factor(GeneID, levels = rev(mygenesBB_top20))) %>%
+  dplyr::select(GeneID, name, cell, FPM, deloc_score_type, p, p2, delocalization_score.calibrated, p.high.corr, FPMmean, ambiguous) %>%
+  pivot_wider(names_from = cell, values_from = c(FPM, p, delocalization_score.calibrated, p.high.corr), values_fill = 0) %>%
+  pivot_longer(cols = c(FPM_ES, p_ES, delocalization_score.calibrated_ES, p.high.corr_ES, FPM_DE, p_DE, delocalization_score.calibrated_DE, p.high.corr_DE), names_to = c(".value","cell"), names_pattern="(.*)_(..)")
+```
+
+
+## Plot ES
+```{r, fig.width=10}
+xtop20 %>% 
+  dplyr::filter(cell=='ES') %>%
+   #mutate(ENSG = forcats::fct_reorder(ENSG, (FPMmean))) %>%
+  ggplot(aes(x=deloc_score_type, y=GeneID, fill=delocalization_score.calibrated))+
+  scale_y_discrete(labels = function(x) {allgenes %>% dplyr::filter(annotation_type=='exons', GeneID %in% x) %>% mutate(GeneID = factor(GeneID, levels=x)) %>% arrange(GeneID) %>% mutate(name = ifelse(ambiguous==1, paste0("*",name), name)) %>% pull(name)})+
+  #scale_x_discrete(position="top", labels = function(x) {x}) +
+  scale_x_discrete(position="top")+
+  geom_tile()+
+  #geom_text(label="o", vjust=0, hjust=0, data = . %>% dplyr::filter(p.high.co))
+  colorspace::scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-6,6))+
+  theme_publish() +
+  labs(fill="Trans or\nCis score")+
+  theme(axis.title = element_blank(), axis.text.x.top = element_text(angle=45, hjust=0), legend.position = "right", legend.direction = "vertical")->p
+
+
+fname="BBcatalog_top30.ES.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*22/20, "in"))
+cowplot::plot_grid(p_fixed)
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+## Plot DE
+```{r, fig.width=10}
+xtop20 %>% 
+  dplyr::filter(cell=='DE') %>%
+   #mutate(ENSG = forcats::fct_reorder(ENSG, (FPMmean))) %>%
+  ggplot(aes(x=deloc_score_type, y=GeneID, fill=delocalization_score.calibrated))+
+  scale_y_discrete(labels = function(x) {allgenes %>% dplyr::filter(annotation_type=='exons', GeneID %in% x) %>% mutate(GeneID = factor(GeneID, levels=x)) %>% arrange(GeneID) %>% mutate(name = ifelse(ambiguous==1, paste0("*",name), name)) %>% pull(name)})+
+  #scale_x_discrete(position="top", labels = function(x) {x}) +
+  scale_x_discrete(position="top")+
+  geom_tile()+
+  #geom_text(label="o", vjust=0, hjust=0, data = . %>% dplyr::filter(p.high.co))
+  colorspace::scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-6,6))+
+  theme_publish() +
+  labs(fill="Trans or\nCis score")+
+  theme(axis.title = element_blank(), axis.text.x.top = element_text(angle=45, hjust=0), legend.position = "right", legend.direction = "vertical")->p
+
+
+fname="BBcatalog_top30.DE.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*22/20, "in"))
+cowplot::plot_grid(p_fixed)
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+
+## Plot expression
+
+```{r, fig.width=10}
+ xtop20 %>% 
+  mutate(cell = factor(cell, levels = c("ES","DE"))) %>%
+  dplyr::filter(deloc_score_type=='cis') %>%
+  ggplot(aes(x=cell, y=GeneID, fill=log10(FPM)))+
+  scale_x_discrete(position="top")+
+  geom_tile()+
+  #geom_text(label="o", vjust=0, hjust=0, data = . %>% dplyr::filter(p.high.co))
+  colorspace::scale_fill_continuous_sequential(palette = "Heat", limits = c(-1,4))+
+  theme_publish()+
+  theme(axis.text.y = element_blank(), axis.line.y = element_blank(), axis.ticks.y = element_blank(), axis.title = element_blank(), axis.text.x.top = element_text(angle=45, hjust=0), legend.position = "right", legend.direction = "vertical") ->p
+
+fname="BBcatalog.ESDE.expression.pdf"
+
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*22/20, "in"))
+plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+
+
+
+## Plot most abundant
+### Prepare data
+```{r, fig.width=8}
+
+x2 <- 
+   deloc_df %>% 
+  dplyr::filter(annotation_type %in% c('exons'), FPM>1,  rna_type == 'lncRNA', ambiguous!=2) %>%
+  mutate(cell=factor(cell, levels=c('ES','DE'))) %>%
+
+  
+  left_join(deloc_df %>% 
+  dplyr::filter(annotation_type %in% c('exons'), FPM>1,  rna_type == 'lncRNA', deloc_score_type=='trans') %>% dplyr::select(GeneID, cell, p.high.corr) %>% dplyr::rename(p0 = p.high.corr) ,
+            by=c("GeneID","cell")) %>%
+  group_by(GeneID, cell) %>%
+  mutate(p = min(p.high.corr, na.rm=T), psum=sum(p.high.corr, na.rm = F), np=n()) %>%
+  ungroup() %>%
+  group_by(GeneID) %>%
+  mutate(p2 = min(p, na.rm=T), FPMmean = mean(FPM, na.rm=T)) %>%
+  ungroup() %>%
+  arrange(desc(FPMmean)) %>%
+  dplyr::filter(!GeneID %in% mygenesBB)
+  #dplyr::filter(p2<0.05) #%>% #, !is.nan(psum), np==2)
+
+# x2 <- tdscores_long  %>%
+#   #dplyr::filter(rnatype %in% c('exons'), D==0, FPM>1) %>%
+#    dplyr::filter(type_name.rep!="tRNA") %>%
+#   
+#  dplyr::filter(subtype3 %in% c("lncRNA"), rnatype=='exons',  FPM>0) %>%
+#   dplyr::filter(D %in% c(0,1000000)) %>%
+#   mutate(D = factor(D, levels = c(0,1000000))) %>%
+#   left_join(tdscores_long %>% dplyr::filter(rnatype=='exons', D==0) %>% dplyr::select(ENSG, cell, p.high.corr) %>% dplyr::rename(p0 = p.high.corr) ,
+#             by=c("ENSG","cell")) %>%
+#   group_by(ENSG, cell) %>%
+#   mutate(p = min(p.high.corr, na.rm=T), psum=sum(p.high.corr, na.rm = F), np=n()) %>%
+#   ungroup() %>%
+#   group_by(ENSG) %>%
+#   mutate(p2 = min(p, na.rm=T), FPMmean = mean(FPM, na.rm=T)) %>%
+#   ungroup() %>%
+#   arrange(desc(FPMmean)) %>%
+
+#   dplyr::filter(!ENSG %in% mygenesBB)
+
+#mygenes <- x %>% dplyr::select(ENSG, FPM) %>% unique() %>% arrange(desc(FPM)) %>% pull(ENSG) %>% 
+
+
+mygenesAbundant_top20 <- x2 %>% 
+  dplyr::select(GeneID, FPMmean) %>% unique() %>% arrange(desc(FPMmean)) %>% head(n=20) %>% pull(GeneID)
+
+
+x2 %>% 
+  dplyr::filter(GeneID %in% mygenesAbundant_top20) %>%
+   mutate(GeneID = forcats::fct_reorder(GeneID, (FPM))) %>%
+  ggplot(aes(x=deloc_score_type, y=ENSG, fill=delocalization_score.calibrated))+
+  scale_y_discrete(labels = function(x) {allgenes %>% dplyr::filter(GeneID %in% x, annotation_type=='exons') %>% mutate(GeneID = factor(GeneID, levels=x)) %>% arrange(GeneID) %>% mutate(name = ifelse(ambiguous==1, paste0("*",name), name)) %>% pull(name)})+
+  scale_x_discrete(position="top") +
+  geom_tile()+
+  #geom_text(label="o", vjust=0, hjust=0, data = . %>% dplyr::filter(p.high.co))
+  colorspace::scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-6,6))+
+  theme_publish() +
+  theme(axis.text.x.top = element_text(angle=45, hjust=0))->p
+
+
+x2top20 = x2 %>% 
+  dplyr::filter(GeneID %in% mygenesAbundant_top20) %>%
+   mutate(GeneID = factor(GeneID, levels = rev(mygenesAbundant_top20))) %>%
+  dplyr::select(GeneID, name, cell, FPM, deloc_score_type, p, p2, delocalization_score.calibrated, p.high.corr, FPMmean) %>%
+  pivot_wider(names_from = cell, values_from = c(FPM, p, delocalization_score.calibrated, p.high.corr), values_fill = 0) %>%
+  pivot_longer(cols = c(FPM_ES, p_ES, delocalization_score.calibrated_ES, p.high.corr_ES, FPM_DE, p_DE, delocalization_score.calibrated_DE, p.high.corr_DE), names_to = c(".value","cell"), names_pattern="(.*)_(..)")
+
+
+```
+
+
+### Most abundant ES
+```{r, fig.width=10}
+x2top20 %>% 
+  dplyr::filter(cell=='ES') %>%
+   #mutate(ENSG = forcats::fct_reorder(ENSG, (FPMmean))) %>%
+  ggplot(aes(x=deloc_score_type, y=GeneID, fill=delocalization_score.calibrated))+
+  scale_y_discrete(labels = function(x) {allgenes %>% dplyr::filter(annotation_type=='exons', GeneID %in% x) %>% mutate(GeneID = factor(GeneID, levels=x)) %>% arrange(GeneID) %>% mutate(name = ifelse(ambiguous==1, paste0("*",name), name)) %>% pull(name)})+
+  #scale_x_discrete(position="top", labels = function(x) {x}) +
+  scale_x_discrete(position="top")+
+  geom_tile()+
+  #geom_text(label="o", vjust=0, hjust=0, data = . %>% dplyr::filter(p.high.co))
+  colorspace::scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-6,6))+
+  theme_publish() +
+  labs(fill="Trans or\nCis score")+
+  theme(axis.title = element_blank(), axis.text.x.top = element_text(angle=45, hjust=0), legend.position = "right", legend.direction = "vertical")->p
+
+
+fname="BBcatalog_mostAbundant.ES.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*20/20, "in"))
+cowplot::plot_grid(p_fixed)
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+
+### Most abundant DE
+```{r, fig.width=10}
+x2top20 %>% 
+  dplyr::filter(cell=='DE') %>%
+   #mutate(ENSG = forcats::fct_reorder(ENSG, (FPMmean))) %>%
+  ggplot(aes(x=deloc_score_type, y=GeneID, fill=delocalization_score.calibrated))+
+  scale_y_discrete(labels = function(x) {allgenes %>% dplyr::filter(annotation_type=='exons', GeneID %in% x) %>% mutate(GeneID = factor(GeneID, levels=x)) %>% arrange(GeneID) %>% mutate(name = ifelse(ambiguous==1, paste0("*",name), name)) %>% pull(name)})+
+  #scale_x_discrete(position="top", labels = function(x) {x}) +
+  scale_x_discrete(position="top")+
+  geom_tile()+
+  #geom_text(label="o", vjust=0, hjust=0, data = . %>% dplyr::filter(p.high.co))
+  colorspace::scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-6,6))+
+  theme_publish() +
+  labs(fill="Trans or\nCis score")+
+  theme(axis.title = element_blank(), axis.text.x.top = element_text(angle=45, hjust=0), legend.position = "right", legend.direction = "vertical")->p
+
+
+fname="BBcatalog_mostAbundant.DE.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*20/20, "in"))
+cowplot::plot_grid(p_fixed)
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+
+
+
+```{r, fig.width=10}
+ x2top20 %>% 
+  mutate(cell = factor(cell, levels = c("ES","DE"))) %>%
+  dplyr::filter(deloc_score_type=='cis') %>%
+  ggplot(aes(x=cell, y=GeneID, fill=log10(FPM)))+
+  scale_x_discrete(position="top")+
+  geom_tile()+
+  #geom_text(label="o", vjust=0, hjust=0, data = . %>% dplyr::filter(p.high.co))
+  colorspace::scale_fill_continuous_sequential(palette = "Heat", limits = c(-1,4))+
+  theme_publish()+
+  theme(axis.text.y = element_blank(), axis.line.y = element_blank(), axis.ticks.y = element_blank(), axis.title = element_blank(), axis.text.x.top = element_text(angle=45, hjust=0), legend.position = "right", legend.direction = "vertical") ->p
+
+fname="BBcatalog_mostAbundant.ESDE.expression.pdf"
+
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*20/20, "in"))
+plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+
+
+
+# Trans vs cis
+
+```{r}
+
+plot_cVSt <- function(d, nlabels = 10, extralabs=c()){
+d %>%
+    mutate(name = ifelse(ambiguous==1, paste0("*",name), name)) %>%
+  dplyr::select(deloc_score_type, GeneID, name, delocalization_score.calibrated, FPM, p.high.corr, p.low.corr) %>%
+  pivot_wider(names_from = deloc_score_type, values_from = c(delocalization_score.calibrated, p.high.corr, p.low.corr)) %>%
+  dplyr::mutate(deloc = case_when((p.high.corr_cis<0.05) & (p.low.corr_trans<0.05) ~ "XIST-like", (p.high.corr_cis<0.05) & (p.high.corr_trans<0.05) ~ "Delocalized",  (p.high.corr_cis<0.05) | (p.high.corr_trans<0.05) ~ "Delocalized", (p.low.corr_cis<0.05) & (p.low.corr_trans<0.05) ~ "Ultra localized",  T ~"none")) %>% 
+  group_by(deloc) %>%
+  arrange(desc(abs(delocalization_score.calibrated_trans)+abs(delocalization_score.calibrated_cis))) %>%
+  mutate(trnk = seq(1,n())) %>%
+  ungroup() %>%
+  #dplyr::rename(`TRANS` = tscore.)
+  #dplyr::filter(FPM>0.1) %>%
+  mutate(deloc=factor(deloc, levels = c("XIST-like","Delocalized","Ultra localized", "none"))) %>%
+  arrange(desc(deloc)) %>%
+    mutate(deloc=factor(deloc, levels = c("Delocalized","Ultra localized", "XIST-like","none"))) %>%
+  ggplot(aes(x = delocalization_score.calibrated_trans, y=delocalization_score.calibrated_cis))+
+  
+  rasterise(geom_point(aes(color=deloc, group=NULL), alpha=0.75, size=2), dev="ragg", dpi=300)+
+  geom_smooth(method = "lm", color='black', se = F, size=0.5, alpha=1, linetype='dashed')+
+  ggpubr::stat_cor(method = "spearman", label.x = 0, label.y = -2) + 
+  
+  geom_text_repel(aes(label=lab),
+                  data= . %>% 
+                    dplyr::filter((deloc!="none") | (name %in% extralabs)) %>% mutate(lab = if_else((trnk<=nlabels) | (name %in% extralabs), name, "")) ,
+                  size=3,
+                   force = 10,
+                  point.padding = 0.2,
+                  box.padding =0.5,
+                  max.iter = 10000,
+                  nudge_x = 0,
+                  nudge_y = 0 ,
+                  #hjust=0,
+                  #direction='y',
+                   min.segment.length = 0.1,
+                  seed = 42,
+                  segment.size = 0.5,
+                  #segment.color = 'firebrick',
+                  fill = alpha(c("white"),0.1),
+                  #color='red',
+                  show.legend=FALSE,
+                  max.overlaps = Inf)+
+                  #xlim = c(-Inf,Inf),
+                  #ylim=c(-Inf, Inf))+
+
+
+  scale_color_manual(values = c(Delocalized = "red3", `Ultra localized` = "dodgerblue", `XIST-like`="purple", none="grey"))+ #`Weakly Delocalized`="deeppink1", 
+  #colorspace::scale_color_continuous_sequential(palette = "Heat", limits = c(0,4))+
+  #geom_abline()+
+  geom_hline(yintercept = 0, linetype='dotted')+
+  geom_vline(xintercept = 0, linetype='dotted')+
+  #coord_cartesian(xlim=c(-3,3), ylim=c(-3,3), expand=F)+
+  theme_publish() +
+  labs(x="Trans score", y= "Cis score", color = "")+
+  theme(legend.position = "right", 
+        legend.direction = "vertical") ->p
+  
+  return(p)
+  }
+
+```
+
+
+
+
+## lncRNA DE
+
+
+```{r}
+p<- plot_cVSt(deloc_df  %>%
+  dplyr::filter(annotation_type %in% c('exons'), rna_type=='lncRNA', cell=='DE', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
+
+fname="transVsCisScore_scatter.lncrna.DE.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+cowplot::plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+
+
+
+lncRNA ES
+
+```{r}
+p<- plot_cVSt(deloc_df  %>%
+  dplyr::filter(annotation_type %in% c('exons'), rna_type=='lncRNA', cell=='ES', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
+
+fname="transVsCisScore_scatter.lncrna.ES.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+cowplot::plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+mRNA ES
+```{r}
+p<- plot_cVSt(deloc_df  %>%
+  dplyr::filter(annotation_type %in% c('exons'), rna_type=='mRNA', cell=='ES', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
+
+fname="transVsCisScore_scatter.mrna.ES.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+cowplot::plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+mRNA DE
+```{r}
+p<- plot_cVSt(deloc_df  %>%
+  dplyr::filter(annotation_type %in% c('exons'), rna_type=='mRNA', cell=='DE', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
+
+fname="transVsCisScore_scatter.mrna.DE.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+cowplot::plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+
+mRNA introns ES
+```{r}
+p<- plot_cVSt(deloc_df  %>%
+  dplyr::filter(annotation_type %in% c('introns'), rna_type=='mRNA', cell=='ES', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
+
+fname="transVsCisScore_scatter.mrnaINTRONS.ES.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+cowplot::plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+mRNA introns DE
+```{r}
+p<- plot_cVSt(deloc_df  %>%
+  dplyr::filter(annotation_type %in% c('introns'), rna_type=='mRNA', cell=='DE', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
+
+fname="transVsCisScore_scatter.mrnaINTRONS.DE.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+cowplot::plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+
+lncRNA introns ES
+```{r}
+p<- plot_cVSt(deloc_df  %>%
+  dplyr::filter(annotation_type %in% c('introns'), rna_type=='lncRNA', cell=='ES', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
+
+fname="transVsCisScore_scatter.lncrnaINTRONS.ES.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+cowplot::plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+lncRNA introns DE
+```{r}
+p<- plot_cVSt(deloc_df  %>%
+  dplyr::filter(annotation_type %in% c('introns'), rna_type=='lncRNA', cell=='DE', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
+
+fname="transVsCisScore_scatter.lncrnaINTRONS.DE.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+cowplot::plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+INTERGENIC ES
+
+
+```{r}
+p<- plot_cVSt(deloc_df  %>%
+  dplyr::filter(annotation_type %in% c('intergenic'), !rna_type %in% c('snRNAderived','tRNAderived'), cell=='ES', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
+
+fname="transVsCisScore_scatter.intergenic.ES.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+cowplot::plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+
+INTERGENIC DE
+```{r}
+p<- plot_cVSt(deloc_df  %>%
+  dplyr::filter(annotation_type %in% c('intergenic'), !rna_type %in% c('snRNAderived','tRNAderived'), cell=='DE', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
+
+fname="transVsCisScore_scatter.intergenic.DE.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+cowplot::plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+# ES vs DE
+
+
+```{r}
+plot_DEvsES <- function(d, nlabels = 10, extralabs=c()){
+d %>%
+     mutate(name = ifelse(ambiguous==1, paste0("*",name), name)) %>%
+  dplyr::mutate(cell = factor(cell, levels = c('ES','DE'))) %>%
+  dplyr::select(cell, GeneID, name, delocalization_score.calibrated, FPM, p.high.corr, p.low.corr) %>%
+  pivot_wider(names_from = cell, values_from = c(FPM, delocalization_score.calibrated, p.high.corr, p.low.corr)) %>%
+ dplyr::mutate(deloc = case_when((p.high.corr_ES<0.05) & (p.high.corr_DE<0.05) ~ "Delocalized ES & DE", p.high.corr_DE<0.05 ~ "Delocalized", p.high.corr_ES<0.05 ~ "Delocalized", (p.low.corr_ES<0.05) & (p.low.corr_DE<0.05) ~ "Ultra localized ES & DE", p.low.corr_DE<0.05 ~ "Ultra localized",  p.low.corr_ES<0.05 ~ "Ultra localized", T ~"none")) %>% 
+  group_by(deloc) %>%
+  arrange(desc(abs(delocalization_score.calibrated_ES)+abs(delocalization_score.calibrated_DE))) %>%
+  mutate(trnk = seq(1,n())) %>%
+  ungroup() %>%
+ 
+    mutate(deloc=factor(deloc, levels = c("Delocalized ES & DE","Delocalized", "Ultra localized ES & DE", "Ultra localized","none"))) %>%
+     arrange(desc(deloc)) %>%
+  ggplot(aes(x = delocalization_score.calibrated_ES, y=delocalization_score.calibrated_DE))+
+  
+  rasterise(geom_point(aes(color=deloc, group=NULL), alpha=0.75, size=2), dev="ragg", dpi=300)+
+  geom_smooth(method = "lm", color='black', se = F, size=0.5, alpha=1, linetype='dashed')+
+  ggpubr::stat_cor(method = "spearman", label.x = 0, label.y = -2) + 
+  
+  geom_text_repel(aes(label=lab),
+                  data= . %>% 
+                    dplyr::filter((deloc!="none") | (name %in% extralabs)) %>% mutate(lab = if_else((trnk<=nlabels) | (name %in% extralabs), name, "")) ,
+                  size=3,
+                   force = 10,
+                  point.padding = 0.2,
+                  box.padding =0.5,
+                  max.iter = 10000,
+                  nudge_x = 0,
+                  nudge_y = 0 ,
+                  #hjust=0,
+                  #direction='y',
+                   min.segment.length = 0.1,
+                  seed = 42,
+                  segment.size = 0.5,
+                  #segment.color = 'firebrick',
+                  fill = alpha(c("white"),0.1),
+                  #color='red',
+                  show.legend=FALSE,
+                  max.overlaps = Inf)+
+                  #xlim = c(-Inf,Inf),
+                  #ylim=c(-Inf, Inf))+
+
+
+  scale_color_manual(values=c(`Delocalized ES & DE`='red3', `Delocalized`="deeppink1", `Ultra localized ES & DE`='dodgerblue', `Ultra localized`="cyan", none="grey"))+
+  #colorspace::scale_color_continuous_sequential(palette = "Heat", limits = c(0,4))+
+  #geom_abline()+
+  geom_hline(yintercept = 0, linetype='dotted')+
+  geom_vline(xintercept = 0, linetype='dotted')+
+  #coord_cartesian(xlim=c(-3,3), ylim=c(-3,3), expand=F)+
+  theme_publish() +
+  labs(x="ES delocalization score", y= "DE delocalization score", color = "")+
+  theme(legend.position = "right", 
+        legend.direction = "vertical") ->p
+  
+  return(p)
+  }
+
+```
+
+
+
+```{r}
+p<- plot_DEvsES(deloc_df  %>%
+  dplyr::filter(annotation_type %in% c('intergenic'), !rna_type %in% c('snRNAderived','tRNAderived'), deloc_score_type=='trans', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
+
+fname="ESVsDE_transDelocScore_scatter.intergenic.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+cowplot::plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+
+```{r}
+p<- plot_DEvsES(deloc_df  %>%
+  dplyr::filter(annotation_type %in% c('exons'), rna_type == c('lncRNA'), deloc_score_type=='trans', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
+
+fname="ESVsDE_transDelocScore_scatter.lncRNA.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+cowplot::plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+```{r}
+p<- plot_DEvsES(deloc_df  %>%
+  dplyr::filter(annotation_type %in% c('exons'), rna_type == c('lncRNA'), deloc_score_type=='cis', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
+
+fname="ESVsDE_cisDelocScore_scatter.lncRNA.pdf"
+p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+cowplot::plot_grid(p_fixed)
+
+ggsave2(here('figures/delocalization',fname), dpi=300)
+```
+
+
