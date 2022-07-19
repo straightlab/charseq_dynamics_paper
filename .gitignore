@@ -1,0 +1,9 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+data-output/
+data-raw/
+figures/
+*.Rproj
+.DS_Store*
