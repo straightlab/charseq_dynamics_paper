@@ -57,18 +57,17 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
     ## Warning: Ignoring unknown parameters: stats
 
 ``` r
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(0.1 * nrow(p$data), "in"), height = unit(1.5, "in"))
+fname='annotation_types.barplot.avg.pdf'
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 0.1 * nrow(p$data), panel.height=1.5)
+```
+
+    ## [1] "fig.width=2.5, fig.height=2.1"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
-
-``` r
-# 
-ggsave2(here("figures/carnas/annotation_types.barplot.avg.pdf"))
-```
-
-    ## Saving 7 x 5 in image
 
 ``` r
 p<- type_tallies %>%
@@ -95,18 +94,17 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
     ## Warning: Ignoring unknown parameters: stats
 
 ``` r
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(0.1/2 * nrow(p$data), "in"), height = unit(1.5, "in"))
+fname='annotation_types.barplot.bycell.pdf'
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 0.1/2 * nrow(p$data), panel.height=1.5)
+```
+
+    ## [1] "fig.width=3.2, fig.height=2.3"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
-
-``` r
-# 
-ggsave2(here("figures/carnas/annotation_types.barplot.bycell.pdf"))
-```
-
-    ## Saving 7 x 5 in image
 
 ``` r
 type_tallies %>% group_by(cell, sequencing) %>%
@@ -182,17 +180,17 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
     ## Warning: Ignoring unknown parameters: stats
 
 ``` r
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(0.7, "in"), height = unit(1.5, "in"))
+fname='annotation_types.barplot.avg.simple.pdf'
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 0.7, panel.height=1.5)
+```
+
+    ## [1] "fig.width=3.3, fig.height=2.4"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.barplot.avg.simple.pdf"))
-```
-
-    ## Saving 7 x 5 in image
 
 ``` r
 p<- type_tallies %>%
@@ -219,17 +217,17 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
     ## Warning: Ignoring unknown parameters: stats
 
 ``` r
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(0.7, "in"), height = unit(1.5, "in"))
+fname='annotation_types.barplot.bycell.simple.pdf'
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 0.7, panel.height=1.5)
+```
+
+    ## [1] "fig.width=3.3, fig.height=4.9"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.barplot.bycell.simple.pdf"))
-```
-
-    ## Saving 8 x 5 in image
 
 ### UNAs
 
@@ -283,23 +281,17 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
     ## Warning: Ignoring unknown parameters: stats
 
 ``` r
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(0.7, "in"), height = unit(1.5, "in"))
+fname='annotation_types.barplot.bysequencing.simple.INTERGENIC.pdf'
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 0.7, panel.height=1.5)
+```
+
+    ## [1] "fig.width=3.8, fig.height=2.4"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.barplot.bysequencing.simple.INTERGENIC.pdf"))
-```
-
-    ## Saving 7 x 5 in image
-
-``` r
-# %>%
-#   group_by(subtype) %>%
-#   mutate(across(starts_with("FPM"), ))
-```
 
 ``` r
 p<- type_tallies %>%
@@ -330,17 +322,17 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
     ## Warning: Ignoring unknown parameters: stats
 
 ``` r
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(0.7, "in"), height = unit(1.5, "in"))
+fname='annotation_types.barplot.bycell.simple.INTERGENIC.pdf'
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 0.7, panel.height=1.5)
+```
+
+    ## [1] "fig.width=3.8, fig.height=2.3"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.barplot.bycell.simple.INTERGENIC.pdf"))
-```
-
-    ## Saving 7 x 5 in image
 
 ## By rna type
 
@@ -390,17 +382,17 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
     ## Warning: Ignoring unknown parameters: stats
 
 ``` r
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(0.7, "in"), height = unit(1.5, "in"))
+fname='annotation_types.barplot.avg.ncRNAsDetails.pdf'
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 0.7, panel.height=1.5)
+```
+
+    ## [1] "fig.width=3.6, fig.height=2.4"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.barplot.avg.ncRNAsDetails.pdf"))
-```
-
-    ## Saving 7 x 5 in image
 
 ``` r
 type_tallies <- exprdata %>%
@@ -443,17 +435,17 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
     ## Warning: Ignoring unknown parameters: stats
 
 ``` r
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(0.7, "in"), height = unit(1.5, "in"))
+fname='annotation_types.barplot.bycell.ncRNAsDetails.pdf'
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 0.7, panel.height=1.5)
+```
+
+    ## [1] "fig.width=3.6, fig.height=4.9"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.barplot.bycell.ncRNAsDetails.pdf"))
-```
-
-    ## Saving 8 x 5 in image
 
 Exons, introns
 
@@ -503,17 +495,17 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
     ## Warning: Ignoring unknown parameters: stats
 
 ``` r
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(0.7, "in"), height = unit(1.5, "in"))
+fname='annotation_types.barplot.avg.ncRNAsDetails_more.pdf'
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 0.7, panel.height=1.5)
+```
+
+    ## [1] "fig.width=2.6, fig.height=2.4"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.barplot.avg.ncRNAsDetails_more.pdf"))
-```
-
-    ## Saving 7 x 5 in image
 
 ### CREs
 
@@ -569,25 +561,18 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
     ## Warning: Ignoring unknown parameters: stats
 
 ``` r
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(1.2, "in"), height = unit(1.5, "in"))
+fname='annotation_types.barplot.avg.INTERGENICdetails.pdf'
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 1.2, panel.height=1.5)
+```
+
+    ## [1] "fig.width=3.8, fig.height=3.1"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.barplot.avg.INTERGENICdetails.pdf"))
-```
-
-    ## Saving 7 x 5 in image
-
-``` r
-# %>%
-#   group_by(subtype) %>%
-#   mutate(across(starts_with("FPM"), ))
-```
-
-### Repeats
+\### Repeats
 
 ``` r
 type_tallies <- exprdata %>%
@@ -613,24 +598,6 @@ ungroup() %>%
     ## using the `.groups` argument.
 
 ``` r
-# type_tallies <- carnas::edataQ %>%
-#         dplyr::filter(annotation_type %in% c('intergenic')) %>%
-#         inner_join(myintergenes %>%
-#           dplyr::select(GeneID, rna_type, rna_subtype, type_name.rep) %>%
-#             dplyr::filter(rna_type=='repeat') %>%
-#             dplyr::mutate(type_name.rep = case_when(stringr::str_detect(type_name.rep, "\\|") ~ "ambiguous",type_name.rep =="-1" ~ "ambiguous",type_name.rep =="Unknown" ~ "ambiguous", T ~ type_name.rep)) , by='GeneID') %>%
-# dplyr::select(GeneID, type_name.rep, starts_with("FPM")) %>%
-#   #mutate(rna_type = factor(rna_type, levels = c("dELS","pELS","PLS","H3K4me3","CTCF"))) %>%
-# pivot_longer(cols=-c(GeneID, type_name.rep), names_to = c("cell", "sequencing"),
-# names_pattern = "FPM\\.(.*)\\.(.*)",
-# values_to = "FPM") %>%
-# group_by(cell, sequencing, type_name.rep) %>%
-# summarise(across(starts_with("FPM"), function(x) sum(x, na.rm=T))) %>%
-# ungroup() %>%
-#             dplyr::mutate(type_name.rep = forcats::fct_reorder(type_name.rep, FPM, .fun=mean, .desc=F)) %>%
-#   mutate(cell =factor(cell, levels = c("ES","DE")))
-# 
-# 
 p<- type_tallies %>%
   group_by(cell, sequencing) %>%
   mutate_if(is.numeric, ~./sum(., na.rm = T)*100) %>%
@@ -654,17 +621,17 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
     ## Warning: Ignoring unknown parameters: stats
 
 ``` r
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(0.8, "in"), height = unit(1.5, "in"))
+fname='annotation_types.barplot.reptypes.pdf'
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 0.8, panel.height=1.5)
+```
+
+    ## [1] "fig.width=4, fig.height=2.3"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.barplot.reptypes.pdf"))
-```
-
-    ## Saving 7 x 5 in image
 
 # Diversity
 
@@ -719,7 +686,7 @@ g0intergenes <- allgenes %>%
    mutate(rna_type = factor(rna_type, levels = c( "repeat","tRNAderived", "snRNAderived", "cre","readthrough","antisense","intergenic")))
 
 
-plot_census <- function(exprdata, g0, cmap){
+plot_census <- function(exprdata, g0, cmap, fname=NULL){
 
 exprdata %>%
   group_by(GeneID, sequencing) %>%
@@ -744,7 +711,12 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
   facet_wrap(~sequencing) +
     labs(fill="FPM cutoff")->p
 #print(p$data)
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(0.2/6*nrow(p$data), "in"), height = unit(1.5, "in"))
+  
+  fname2=NULL
+  if (! is.null(fname)){
+    fname2=here('figures/carnas', fname)
+  }
+  p_fixed<- prettysave(p,fname2 , panel.width= 0.2/6*nrow(p$data), panel.height=1.5)
 plot_grid(p_fixed)
 }
 ```
@@ -752,41 +724,33 @@ plot_grid(p_fixed)
 ### by rna type
 
 ``` r
-plot_census(expr_intergenes, g0intergenes, "Reds")
+plot_census(expr_intergenes, g0intergenes, "Reds", fname='rnadiversity.barplot.percent.intergenic.pdf')
 ```
 
     ## `summarise()` has grouped output by 'GeneID'. You can override using the
     ## `.groups` argument.
 
     ## Warning: Ignoring unknown parameters: stats
+
+    ## [1] "fig.width=4.6, fig.height=2.9"
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 ``` r
-ggsave2(here("figures/carnas/rnadiversity.barplot.percent.intergenic.pdf"))
-```
-
-    ## Saving 7 x 5 in image
-
-``` r
-plot_census(expr_genes %>% dplyr::filter(annotation_type=='introns'), g0introns, "Purples")
+plot_census(expr_genes %>% dplyr::filter(annotation_type=='introns'), g0introns, "Purples", fname="rnadiversity.barplot.percent.introns.pdf")
 ```
 
     ## `summarise()` has grouped output by 'GeneID'. You can override using the
     ## `.groups` argument.
 
     ## Warning: Ignoring unknown parameters: stats
+
+    ## [1] "fig.width=3, fig.height=2.6"
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
 
 ``` r
-ggsave2(here("figures/carnas/rnadiversity.barplot.percent.introns.pdf"))
-```
-
-    ## Saving 7 x 5 in image
-
-``` r
-plot_census(expr_genes %>% dplyr::filter(annotation_type=='exons'), g0, "Blues")
+plot_census(expr_genes %>% dplyr::filter(annotation_type=='exons'), g0, "Blues", fname="rnadiversity.barplot.percent.exons.pdf")
 ```
 
     ## `summarise()` has grouped output by 'GeneID'. You can override using the
@@ -794,15 +758,10 @@ plot_census(expr_genes %>% dplyr::filter(annotation_type=='exons'), g0, "Blues")
 
     ## Warning: Ignoring unknown parameters: stats
 
+    ## [1] "fig.width=3, fig.height=2.6"
+
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/rnadiversity.barplot.percent.exons.pdf"))
-```
-
-    ## Saving 7 x 5 in image
-
-### subtype CREs
+\### subtype CREs
 
 ``` r
 expr_cre <-
@@ -825,7 +784,7 @@ g0cre <- allgenes %>%
     mutate(rna_type = factor(rna_type, levels = c("dELS","pELS","PLS","DNase-H3K4me3","CTCF-only"))) 
 
 
-plot_census(expr_cre, g0cre, "Reds")
+plot_census(expr_cre, g0cre, "Reds", fname="rnadiversity.barplot.percent.CREs.pdf")
 ```
 
     ## `summarise()` has grouped output by 'GeneID'. You can override using the
@@ -833,15 +792,10 @@ plot_census(expr_cre, g0cre, "Reds")
 
     ## Warning: Ignoring unknown parameters: stats
 
+    ## [1] "fig.width=3.8, fig.height=3.1"
+
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/rnadiversity.barplot.percent.CREs.pdf"))
-```
-
-    ## Saving 7 x 5 in image
-
-### subtype repeats
+\### subtype repeats
 
 ``` r
 expr_rep <-
@@ -871,7 +825,7 @@ g0rep <- allgenes %>%
     mutate(rna_type = factor(rna_type, levels = c("LTR","LINE","SINE","DNA","Satellite","Simple_repeat","rRNA","Low_complexity","Retroposon","ambiguous"))) 
 
 
-plot_census(expr_rep, g0rep, "Reds")
+plot_census(expr_rep, g0rep, "Reds", fname="rnadiversity.barplot.percent.repeats.pdf")
 ```
 
     ## `summarise()` has grouped output by 'GeneID'. You can override using the
@@ -879,18 +833,13 @@ plot_census(expr_rep, g0rep, "Reds")
 
     ## Warning: Ignoring unknown parameters: stats
 
+    ## [1] "fig.width=4.4, fig.height=2.8"
+
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+\## Absolute number of RNAs at threshold
 
 ``` r
-ggsave2(here("figures/carnas/rnadiversity.barplot.percent.repeats.pdf"))
-```
-
-    ## Saving 7 x 5 in image
-
-## Absolute number of RNAs at threshold
-
-``` r
-plot_N <- function(exprdata, g0, cmap){
+plot_N <- function(exprdata, g0, cmap, fname=NULL){
 
 s <- exprdata %>%
   group_by(GeneID, sequencing) %>%
@@ -921,9 +870,13 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
   theme(axis.text.x = element_text(angle=45, hjust=1))+
   facet_wrap(~sequencing) ->p
 #print(p$data)
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(0.2/4*nrow(p$data), "in"), height = unit(1.5, "in"))
 
-
+ fname2=NULL
+  if (! is.null(fname)){
+    fname2=here('figures/carnas', fname)
+  }
+  p_fixed<- prettysave(p,fname2 , panel.width= 0.2/4*nrow(p$data), panel.height=1.5)
+#plot_grid(p_fixed)
 
 return(list(data=s, plt=p_fixed))
 }
@@ -993,13 +946,15 @@ expr_genes %>% dplyr::filter(annotation_type=='exons') %>%
 ### by rna type
 
 ``` r
-out = plot_N(expr_genes %>% dplyr::filter(annotation_type=='exons'), g0, "Blues")
+out = plot_N(expr_genes %>% dplyr::filter(annotation_type=='exons'), g0, "Blues","rnadiversity.barplot.N.exons.pdf")
 ```
 
     ## `summarise()` has grouped output by 'GeneID'. You can override using the
     ## `.groups` argument.
 
     ## Warning: Ignoring unknown parameters: stats
+
+    ## [1] "fig.width=3.9, fig.height=2.6"
 
 ``` r
 print(out$data)
@@ -1022,19 +977,15 @@ plot_grid(out$plt)
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
 
 ``` r
-ggsave2(here("figures/carnas/rnadiversity.barplot.N.exons.pdf"))
-```
-
-    ## Saving 7 x 5 in image
-
-``` r
-out = plot_N(expr_genes %>% dplyr::filter(annotation_type=='introns'), g0introns, "Purples")
+out = plot_N(expr_genes %>% dplyr::filter(annotation_type=='introns'), g0introns, "Purples", fname="rnadiversity.barplot.N.introns.pdf")
 ```
 
     ## `summarise()` has grouped output by 'GeneID'. You can override using the
     ## `.groups` argument.
 
     ## Warning: Ignoring unknown parameters: stats
+
+    ## [1] "fig.width=3.9, fig.height=2.6"
 
 ``` r
 print(out$data)
@@ -1057,19 +1008,15 @@ plot_grid(out$plt)
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
 
 ``` r
-ggsave2(here("figures/carnas/rnadiversity.barplot.N.introns.pdf"))
-```
-
-    ## Saving 7 x 5 in image
-
-``` r
-out = plot_N(expr_intergenes, g0intergenes, "Reds")
+out = plot_N(expr_intergenes, g0intergenes, "Reds", fname="rnadiversity.barplot.N.intergenic.pdf")
 ```
 
     ## `summarise()` has grouped output by 'GeneID'. You can override using the
     ## `.groups` argument.
 
     ## Warning: Ignoring unknown parameters: stats
+
+    ## [1] "fig.width=5.5, fig.height=2.9"
 
 ``` r
 print(out$data)
@@ -1099,22 +1046,18 @@ plot_grid(out$plt)
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
 
-``` r
-ggsave2(here("figures/carnas/rnadiversity.barplot.N.intergenic.pdf"))
-```
-
-    ## Saving 7 x 5 in image
-
 ### cre subtypes
 
 ``` r
-out = plot_N(expr_cre, g0cre, "Reds")
+out = plot_N(expr_cre, g0cre, "Reds", fname="rnadiversity.barplot.N.cre.pdf")
 ```
 
     ## `summarise()` has grouped output by 'GeneID'. You can override using the
     ## `.groups` argument.
 
     ## Warning: Ignoring unknown parameters: stats
+
+    ## [1] "fig.width=4.6, fig.height=3.1"
 
 ``` r
 print(out$data)
@@ -1139,23 +1082,18 @@ plot_grid(out$plt)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+\### repeats subtypes
 
 ``` r
-ggsave2(here("figures/carnas/rnadiversity.barplot.N.cre.pdf"))
-```
-
-    ## Saving 7 x 5 in image
-
-### repeats subtypes
-
-``` r
-out = plot_N(expr_rep, g0rep, "Reds")
+out = plot_N(expr_rep, g0rep, "Reds", fname="rnadiversity.barplot.N.repeats.pdf")
 ```
 
     ## `summarise()` has grouped output by 'GeneID'. You can override using the
     ## `.groups` argument.
 
     ## Warning: Ignoring unknown parameters: stats
+
+    ## [1] "fig.width=5.4, fig.height=2.8"
 
 ``` r
 print(out$data)
@@ -1185,12 +1123,6 @@ plot_grid(out$plt)
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
 
-``` r
-ggsave2(here("figures/carnas/rnadiversity.barplot.N.repeats.pdf"))
-```
-
-    ## Saving 7 x 5 in image
-
 ## Expression distribution
 
 ### exons, introns, UNAs
@@ -1216,17 +1148,16 @@ dplyr::select(GeneID, cell, sequencing, annotation_type, FPM) %>%
   theme(panel.grid.major.x = element_line(size = 0.5, linetype = "dotted"))+
   labs(x="FPM", y=NULL)->p
 
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(2.1, "in"), height = unit(0.5*3, "in"))
+p_fixed<- prettysave(p,here("figures/carnas/annotation_types.exprdist.eix_compareSequencing.pdf") , panel.width= 2.1, panel.height=0.5*3)
+```
+
+    ## [1] "fig.width=5, fig.height=2.8"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.exprdist.eix_compareSequencing.pdf"))
-```
-
-    ## Saving 7 x 5 in image
 
 ``` r
 expr_genes %>%
@@ -1247,17 +1178,16 @@ dplyr::filter(FPM>0.1) %>%
   theme(panel.grid.major.x = element_line(size = 0.5, linetype = "dotted"))+
   labs(x="FPM", y=NULL)->p
 
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(2.1, "in"), height = unit(0.5*3, "in"))
+p_fixed<- prettysave(p,here("figures/carnas/annotation_types.exprdist.eix_compareCcell.pdf") , panel.width= 2.1, panel.height=0.5*3)
+```
+
+    ## [1] "fig.width=5, fig.height=2.8"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.exprdist.eix_compareCcell.pdf"))
-```
-
-    ## Saving 7 x 5 in image
 
 ### by RNA type (all UNAs combined)
 
@@ -1284,21 +1214,16 @@ dplyr::filter(FPM>0.1, !is.na(rna_type)) %>%
   theme(panel.grid.major.x = element_line(size = 0.5, linetype = "dotted"))+
   labs(x="FPM", y=NULL)->p
 
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(1.8, "in"), height = unit(0.5*4, "in"))
+p_fixed<- prettysave(p,here("figures/carnas/annotation_types.exprdist.exons_compareCells.pdf") , panel.width= 1.8, panel.height=0.5*4)
+```
+
+    ## [1] "fig.width=4.5, fig.height=3.3"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.exprdist.exons_compareCells.pdf"))
-```
-
-    ## Saving 7 x 5 in image
-
-``` r
- # theme(panel.grid.major = element_line())
-```
 
 ``` r
 expr_genes %>%
@@ -1323,17 +1248,16 @@ dplyr::filter(FPM>0.1, !is.na(rna_type)) %>%
   theme(panel.grid.major.x = element_line(size = 0.5, linetype = "dotted"))+
   labs(x="FPM", y=NULL)->p
 
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(1.8, "in"), height = unit(0.5*4, "in"))
+p_fixed<- prettysave(p,here("figures/carnas/annotation_types.exprdist.exons_compareSequencing.pdf") , panel.width= 1.8, panel.height=0.5*4)
+```
+
+    ## [1] "fig.width=4.5, fig.height=3.3"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.exprdist.exons_compareSequencing.pdf"))
-```
-
-    ## Saving 7 x 5 in image
 
 ### UNAs details
 
@@ -1357,17 +1281,16 @@ dplyr::mutate(rna_type = factor(rna_type, levels = c("repeat","tRNAderived", "sn
   theme(panel.grid.major.x = element_line(size = 0.5, linetype = "dotted"))+
   labs(x="FPM", y=NULL)->p
 
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(1.8, "in"), height = unit(0.5*7, "in"))
+p_fixed<- prettysave(p,here("figures/carnas/annotation_types.exprdist.intergenic.pdf") , panel.width= 1.8, panel.height=0.5*7)
+```
+
+    ## [1] "fig.width=5, fig.height=4.8"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.exprdist.intergenic.pdf"))
-```
-
-    ## Saving 8 x 5 in image
 
 ### repeat details
 
@@ -1392,17 +1315,16 @@ expr_intergenes  %>%
   theme(panel.grid.major.x = element_line(size = 0.5, linetype = "dotted"))+
   labs(x="FPM", y=NULL)->p
 
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(1.8, "in"), height = unit(0.5*10, "in"))
+p_fixed<- prettysave(p,here("figures/carnas/annotation_types.exprdist.intergenicREPEATS.pdf") , panel.width= 1.8, panel.height=0.5*7)
+```
+
+    ## [1] "fig.width=4.8, fig.height=4.8"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.exprdist.intergenicREPEATS.pdf"))
-```
-
-    ## Saving 10 x 5 in image
 
 ### CRE details
 
@@ -1431,112 +1353,13 @@ expr_intergenes  %>%
     ## Joining, by = "GeneID"
 
 ``` r
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(1.8, "in"), height = unit(0.5*10, "in"))
+p_fixed<- prettysave(p,here("figures/carnas/annotation_types.exprdist.intergenicCRE.pdf") , panel.width= 1.8, panel.height=0.5*5)
+```
+
+    ## [1] "fig.width=5.2, fig.height=3.8"
+
+``` r
 plot_grid(p_fixed)
 ```
 
 ![](visu_carnas_basicstats_files/figure-gfm/unnamed-chunk-35-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/carnas/annotation_types.exprdist.intergenicCRE.pdf"))
-```
-
-    ## Saving 10 x 5 in image
-
-# EI ratios
-
-# `{r} # eidata <- carnas::edataQ %>% #         #dplyr::select(-type) %>% #         dplyr::filter(annotation_type %in% c('exons','introns')) %>% #         inner_join(genes::genes$genes %>% #           dplyr::select(GeneID, rna_type, rna_subtype, type, ilen, elen) %>% #               dplyr::mutate(rna_type = case_when(type == 'misc_RNA' ~ 'lncRNA', rna_type=='protein_coding' ~ 'mRNA', T~rna_type)) %>% #           dplyr::filter(rna_type %in% c('ncRNA','mRNA','lncRNA')), by='GeneID') %>% # dplyr::select(GeneID, annotation_type, rna_type, ilen, elen, starts_with("FPM")) %>% # pivot_longer(cols=-c(GeneID, annotation_type, rna_type, ilen, elen), names_to = c("cell", "sequencing"), # names_pattern = "FPM\\.(.*)\\.(.*)", # values_to = "FPM") %>% #   pivot_wider(names_from = "annotation_type", values_from="FPM", names_prefix = "FPM_", values_fill = 0) %>% #   mutate(FPM_exons = replace_na(FPM_exons, 0), FPM_introns = replace_na(FPM_introns, 0)) #    #`
-
-# 
-
-# 
-
-# 
-
-# `{r} # eidata %>% dplyr::filter(rna_type %in% c('mRNA',"lncRNA")) %>% #   mutate(fpmratio = (FPM_exons/(FPM_introns))/(elen/(ilen))) %>% #   dplyr::filter(FPM_exons>0.1, FPM_introns>0.1) %>% #   group_by(sequencing, cell, rna_type) %>% #   mutate(medval = median(log2(fpmratio))) %>% #   ungroup() %>% #   mutate(rna_type = factor(rna_type, levels = c("mRNA","lncRNA"))) %>% #   ggplot(aes(y = sequencing, x = log2(fpmratio), color=cell)) +  #    #   stat_slab(aes(slab_color=cell), fill=NA, normalize="xy") + #   stat_pointinterval(point_interval = median_qi, .width = c(.75), interval_size=1, position = position_dodge(width = .2, preserve = "single"))+ #   geom_vline(aes(xintercept = medval, color=cell), linetype='dotted')+ #   scale_color_manual(values=c(ES="cornflowerblue", DE="gold3"))+ #   scale_color_manual(aesthetics = "slab_color", values=c(ES="cornflowerblue", DE="gold3"))+ #   theme_publish()+  #   scale_x_continuous(limits = c(-3,8), breaks = seq(-3,8,1),expand=c(0,0), labels = scales::math_format(2^.x))+ #scales::math_format #   facet_wrap(~rna_type)+ #   labs(x="exons:introns FPKM ratio", y=NULL)+ #   labs(x="FPM", y=NULL) ->p #  # p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(1.8, "in"), height = unit(0.7*2, "in")) # plot_grid(p_fixed) #  # ggsave2(here("figures/eiratio.22-03-23.pdf")) #`
-
-# 
-
-# `{r} # eidata %>% dplyr::filter(rna_type%in%c('mRNA',"lncRNA")) %>% #   mutate(fpmratio = (FPM_exons/(FPM_introns))/(elen/(ilen))) %>% #   dplyr::filter(FPM_exons>0.1, FPM_introns>0.1) %>% #   group_by(sequencing, cell, rna_type) %>% #   summarize(medval = median((fpmratio))) #`
-
-# 
-
-# 
-
-# `{r} # eidata %>% dplyr::filter(rna_type%in%c('mRNA',"lncRNA")) %>% #   mutate(fpmratio = (FPM_exons/(FPM_introns))/(elen/(ilen))) %>% #   dplyr::filter(FPM_exons>0.1, FPM_introns>0.1) %>% #   group_by(sequencing, rna_type) %>% #   summarize(medval = median((fpmratio))) #`
-
-# 
-
-# `{r} # eidata %>%  #   mutate(fpmratio = (FPM_exons/(FPM_introns))/(elen/(ilen))) %>% #   dplyr::filter(FPM_exons>0.1, FPM_introns>0.1) %>% #   dplyr::filter(rna_type=="mRNA", cell=="ES", fpmratio>20, FPM_exons<100) %>% #   arrange(desc(FPM_exons)) %>% #   left_join(genes::genes$genes %>% dplyr::select(GeneID, name, chr, strand)) %>% relocate(name, chr, fpmratio, strand, FPM_exons)  #`
-
-# 
-
-# 
-
-# \# Read count
-
-# 
-
-# `{r} # qc <- read_parquet(here('../QC/data-output/QC_effciency.parquet')) #  # Ntotal <-  qc %>% dplyr::filter(step=='duplication', stat=='step input') %>% dplyr::select(-step, -stat) %>% pivot_longer(everything(), names_to='cell', values_to='N') %>% #   separate(cell, c("cell","rep"), sep="_") #  #  # Ns <- qc %>% dplyr::filter(step=='pairing', stat=='step output') %>% dplyr::select(-step, -stat) %>% pivot_longer(everything(), names_to='cell', values_to='N') %>% #   separate(cell, c("cell","rep"), sep="_") #  # ei <- qc %>% dplyr::filter(step=='pairing', stat %in% c("%Exons","%Introns",'%Intergenic','%Ambiguous')) %>% dplyr::select(-step) %>% mutate(stat=case_when(stat=="%Ambiguous"~"Intergenic",stat== '%Exons'~'Exons', stat=='%Introns'~'Introns', stat=='%Intergenic'~'Intergenic', T~stat)) %>% group_by(stat) %>% summarize_all(sum) %>% pivot_longer(-c(stat), names_to='cell', values_to='percent') %>% #   separate(cell, c("cell","rep"), sep="_")  #  # ei_avg <- ei %>% dplyr::select(-rep) %>% group_by(stat, cell) %>% summarise_all(mean) #  # ei_avg2 <- ei %>% dplyr::select(-rep, -cell) %>% group_by(stat) %>% summarise_all(mean) #  # Ns_avg <- Ns %>% dplyr::select(-rep) %>% group_by(cell) %>% summarise_all(mean) # Ns_avg2 <- mean(Ns$N) #`
-
-# 
-
-# 
-
-# `{r} # qc #`
-
-# 
-
-# `{r} # Ns %>% mutate(N=N/1e6) %>% write_csv(here('../QC/data-output/Nreads.csv')) #`
-
-# 
-
-# `{r} # p<- Ns %>% #   mutate(cell=factor(cell, levels=c("ES","DE"))) %>% #   unite("cell2",c(cell,rep),remove = F) %>% #   mutate(cell2=factor(cell2, levels=c("ES_rep1","ES_rep2","DE_rep1","DE_rep2"))) %>% #   ggplot(aes(x=cell2, y=N/1e6, fill=cell))+ #   geom_col()+ #   theme_publish()+ #   ggsci::scale_fill_jco() + #   scale_y_continuous(expand = c(0, 0))+ #   theme(legend.position = "right", legend.direction = "vertical", axis.text.x = element_text(angle=45, hjust=1))+ #   labs(x=NULL, y="Million reads", fill=NULL) #  # p_fixed <- egg::set_panel_size(p=p, margin = unit(0.5, "in"), width = unit(0.1 * 2 * nrow(p$data), "in"), height = unit(1.5, "in")) # plot_grid(p_fixed) #  # #ggsave2(here("figures/N.barplot.pdf")) #`
-
-# 
-
-# 
-
-# 
-
-# 
-
-# `{r} # p<- Ntotal %>% #   mutate(cell=factor(cell, levels=c("ES","DE"))) %>% #   unite("cell2",c(cell,rep),remove = F) %>% #   mutate(cell2=factor(cell2, levels=c("ES_rep1","ES_rep2","DE_rep1","DE_rep2"))) %>% #   ggplot(aes(x=cell2, y=N/1e6, fill=cell))+ #   geom_col()+ #   theme_publish()+ #   ggsci::scale_fill_jco() + #   scale_y_continuous(expand = c(0, 0))+ #   theme(legend.position = "right", legend.direction = "vertical", axis.text.x = element_text(angle=45, hjust=1))+ #   labs(x=NULL, y="Million reads", fill=NULL) #  # p_fixed <- egg::set_panel_size(p=p, margin = unit(0.5, "in"), width = unit(0.1 * 2 * nrow(p$data), "in"), height = unit(1.5, "in")) # plot_grid(p_fixed) #  # ggsave2(here("figures/Ntotal.barplot.pdf")) #`
-
-# 
-
-# `` {r} # carnas::counts_tableQ %>% dplyr::filter(!annotation_type %in% c("exons","introns")) %>% #   dplyr::select(annotation_type, TFONM2, TMF2, TGNQ5, TMF3) %>% #   dplyr::rename(ES_rep1=TFONM2, ES_rep2=TMF2, DE_rep1=TGNQ5, DE_rep2=TMF3) %>% #     mutate(annotation_type = if_else(annotation_type=="all", "Gencode","Unannotated")) %>% #   group_by(annotation_type) %>% #   summarise(across(.fns = sum)) %>% #     ungroup() %>% #   pivot_longer(-annotation_type, names_to="cell2", values_to="N") %>% #   separate(cell2, c("cell","replicate"), remove = F) %>% #   mutate(fillval = factor(paste0(cell," ",annotation_type), levels = c("ES Unannotated","ES Gencode","DE Unannotated","DE Gencode"))) %>% #   mutate(cell2=factor(cell2, levels=c("ES_rep1","ES_rep2","DE_rep1","DE_rep2"))) %>% #      #   ggplot(aes(x=cell2, y=N/1e6, fill=fillval))+ #   geom_col()+ #   theme_publish()+ #   scale_fill_manual(values=c(`ES Unannotated`="cornflowerblue", `DE Unannotated`="gold3", `ES Gencode`="#1873BB", `DE Gencode`="#EEC01C")) + #   scale_y_continuous(expand = c(0, 0))+ #   theme(legend.position = "right", legend.direction = "vertical", axis.text.x = element_text(angle=45, hjust=1))+ #   labs(x=NULL, y="Million reads", fill=NULL) ->p #  # p_fixed <- egg::set_panel_size(p=p, margin = unit(0.5, "in"), width = unit(0.07 * 2 * nrow(p$data), "in"), height = unit(1.5, "in")) # plot_grid(p_fixed) #  # ggsave2(here("figures/NQ255Q40.barplot.pdf")) #  # ``
-
-# 
-
-# 
-
-# RNA seq
-
-# `{r} # qc_rna <- read_parquet(here('../QC/data-output/RNAseq_eix.parquet')) %>% #   dplyr::rename(stat=type) %>% pivot_longer(-stat,names_to = c("cell", "rep"), values_to="N",  names_pattern="(.*)_rna_(.*)") %>% group_by(cell, rep) %>% #   mutate(percent=N/sum(N)*100, Nreads=sum(N)) %>% ungroup() %>% #   mutate(rep=sprintf("rep%s", rep)) #  # qc_rna_avg <- qc_rna %>% group_by(stat) %>% summarise(percent=mean(percent), Nreads=mean(Nreads)) #  #  #  #`
-
-# 
-
-# `` {r} # qc_all <- bind_rows(list(`Total RNA`=qc_rna_avg %>% dplyr::select(-Nreads), caRNA=ei_avg2), .id='Sequencing') %>% #   pivot_wider(names_from=Sequencing, values_from=percent) %>% #   mutate(lab=sprintf("%s (%s, %s)", stat, scales::percent(round(caRNA/100, 3)), scales::percent(round(`Total RNA`/100,3))) ) %>% #   pivot_longer(c(`caRNA`, `Total RNA`), names_to='Sequencing', values_to='percent')  #  # qc_all # ``
-
-# 
-
-# 
-
-# `` {r} # qc_all_novg <- bind_rows(list(`Total RNA`=qc_rna %>% dplyr::select(-Nreads), caRNA=ei), .id='Sequencing') # qc_all_novg # ``
-
-# 
-
-# 
-
-# 
-
-# Plot avg over all cells
-
-# `{r} # p<- qc_all %>%  #   ggplot(aes(x=Sequencing, y=percent, fill=lab))+ #   geom_col()+ #   theme_publish()+ #   scale_fill_manual(values=c('#8856a7','#43a2ca','#bdbdbd'))+ #   scale_y_continuous(expand = c(0, 0))+ #   theme(legend.position = "right", legend.direction = "vertical")+ #   labs(x=NULL, y="% reads", fill=NULL)+ #   theme(legend.position = "right", legend.direction = "vertical", axis.text.x = element_text(angle=45, hjust=1)) #  # p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "in"), width = unit(0.1 * nrow(p$data), "in"), height = unit(1.5, "in")) # plot_grid(p_fixed) #  # ggsave2(here("figures/eix.barplot.avg.pdf")) #`
-
-# Plot eix by cell type
-
-# `{r} # p<- lapply(list(qc_all_novg %>%  #   dplyr::filter(Sequencing=="caRNA"),qc_all_novg %>%  #   dplyr::filter(Sequencing=="Total RNA")), function (x){ x %>%  #   unite("cell",c(cell,rep)) %>% #   mutate(cell=factor(cell, levels=c("ES_rep1","ES_rep2","ES_rep3","ES_rep4","DE_rep1","DE_rep2","DE_rep3","DE_rep4"))) %>% #   ggplot(aes(x=cell, y=percent, fill=stat))+ #   geom_col()+ #   theme_publish()+ #   #ggsci::scale_fill_jco() + #   scale_fill_manual(values=c('#8856a7','#43a2ca','#bdbdbd'))+ #   scale_y_continuous(expand = c(0, 0))+ #   theme( axis.text.x = element_text(angle=45, hjust=1))+ #   labs(x=NULL, y="% reads", fill=NULL)})#+ #   #facet_grid(.~Sequencing, scales = "free", space = "free") #  #  # legend <- get_legend(p[[1]]+ theme(legend.position = "bottom", legend.direction = "horizontal")) # p[[1]]<- p[[1]]+ theme(legend.position = "none") + ggtitle("caRNA") # p[[2]]<- p[[2]]+ theme(legend.position = "none") + ggtitle("Total RNA") #  #  #  # prow <- plot_grid(plotlist=lapply(p, function(x) egg::set_panel_size(p = x, margin = unit(0.5, "in"), width = unit(0.08 * nrow(x$data), "in"), height = unit(1.5, "in"))), #   align = 'h', #   labels = c("A", "B"), #   hjust = -1, #   nrow = 1) # plot_grid(prow, legend, ncol = 1, rel_heights = c(1, .1)) #  # ggsave2(here("figures/eix.barplot.ALL.pdf")) # #  # # p_fixed <- egg::set_panel_size(p=p, margin = unit(0.5, "in"), width = unit(0.08 * nrow(p$data), "in"), height = unit(1.5, "in")) # # plot_grid(p_fixed) #`
-
-# `{r} # p<- Ns %>% #   mutate(cell=factor(cell, levels=c("ES","DE"))) %>% #   unite("cell2",c(cell,rep),remove = F) %>% #   mutate(cell2=factor(cell2, levels=c("ES_rep1","ES_rep2","DE_rep1","DE_rep2"))) %>% #   ggplot(aes(x=cell2, y=N/1e6, fill=cell))+ #   geom_col()+ #   theme_publish()+ #   ggsci::scale_fill_jco() + #   scale_y_continuous(expand = c(0, 0))+ #   theme(legend.position = "right", legend.direction = "vertical", axis.text.x = element_text(angle=45, hjust=1))+ #   labs(x=NULL, y="Million reads", fill=NULL) #  # p_fixed <- egg::set_panel_size(p=p, margin = unit(0.5, "in"), width = unit(0.1 * 2 * nrow(p$data), "in"), height = unit(1.5, "in")) # plot_grid(p_fixed) #  # ggsave2(here("figures/N.barplot.pdf")) #`

@@ -11,8 +11,6 @@ library(ggplot2)
 library(ggrepel)
 library(ggrastr)
 library(ggpubr)
-# library(ggnewscale)
-# library(ggsci)
 library(readr)
 library(arrow)
 library(here)
@@ -42,11 +40,6 @@ deloc_df <- delocdata %>%
   mutate(rna_type = if_else(rna_type=='ncRNA', rna_subtype, rna_type))
 ```
 
-```{r}
-deloc_df
-```
-
-
 
 # Densities
 
@@ -72,7 +65,7 @@ return(p)
 
 ```
 
-```{r, fig.width=8}
+```{r, fig.width=2.8, fig.height=5}
 mytypes  <- c(c('mRNA','lncRNA','snRNA','snoRNA'),c("repeat","tRNAderived", "snRNAderived","cre","readthrough","antisense","intergenic"))
 
 mydata <- deloc_df %>% 
@@ -80,10 +73,11 @@ mydata <- deloc_df %>%
   mutate(rna_type = factor(rna_type, levels = rev(mytypes)), cell=factor(cell, levels=c('ES','DE'))) 
 
 p <- plot_deloc_halfeye(mydata) + labs(x="Trans delocalization\nscore", y=NULL)
+
 fname="delocscore.density.byclass.intergenicANDexons.halfeye.trans.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.5, "in"), height=unit(1.75*12/5, "in"))
+
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.5, panel.height=1.75*12/5)
 plot_grid(p_fixed)
-ggsave2(here("figures/delocalization", fname), dpi=300)
 ```
 
 ```{r, fig.width=8}
@@ -93,9 +87,9 @@ mydata <- deloc_df %>%
 
 p <- plot_deloc_halfeye(mydata) + labs(x="Cis delocalization\nscore", y=NULL)
 fname="delocscore.density.byclass.intergenicANDexons.halfeye.trans.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.5, "in"), height=unit(1.75*12/5, "in"))
+
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.5, panel.height=1.75*12/5)
 plot_grid(p_fixed)
-ggsave2(here("figures/delocalization", fname), dpi=300)
 ```
 
 # Census of delocalized RNAs
@@ -136,24 +130,20 @@ return(p)
 
 ## CIS 
 Without lncRNA mRNA
-```{r, fig.width=6}
+```{r, fig.width=2.1, fig.height=4.2}
 mytypes1  <- c(c('snRNA','snoRNA'),c("repeat","tRNAderived", "snRNAderived","cre","readthrough","antisense","intergenic"))
 
 p<- plot_deloc_significant(deloc_df %>% 
   dplyr::filter(annotation_type %in% c('intergenic', 'exons'), FPM>1, deloc_score_type=='cis', rna_type %in% mytypes1) %>%
   mutate(rna_type = factor(rna_type, levels = rev(mytypes1)), cell=factor(cell, levels=c('ES','DE')))) 
   
-
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.2, "in"), height=unit(1.75*10/5, "in"))
-plot_grid(p_fixed)
-
 fname="deloc.CIS.intergenicANDexons.hist.noLncMRNA.pdf"
-ggsave2(here("figures/delocalization", fname), dpi=300)
-
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.2, panel.height=1.75*10/5)
+plot_grid(p_fixed)
 ```
 
 lncRNA mRNA
-```{r, fig.width=6}
+```{r, fig.width=2.1, fig.height=1.4}
 mytypes1  <- c("mRNA","lncRNA")
 
 p<- plot_deloc_significant(deloc_df %>% 
@@ -161,33 +151,28 @@ p<- plot_deloc_significant(deloc_df %>%
   mutate(rna_type = factor(rna_type, levels = rev(mytypes1)), cell=factor(cell, levels=c('ES','DE')))) 
   
 
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.2, "in"), height=unit(1.75*2/5, "in"))
+fname="deloc.CIS.intergenicANDexons.hist.LncMRNAonly.pdf"
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.2, panel.height=1.75*2/5)
 plot_grid(p_fixed)
 
-fname="deloc.CIS.intergenicANDexons.hist.LncMRNAonly.pdf"
-ggsave2(here("figures/delocalization", fname), dpi=300)
 
 ```
 ## TRANS 
 Without lncRNA mRNA
-```{r, fig.width=6}
+```{r, fig.width=2.1, fig.height=4.2}
 mytypes1  <- c(c('snRNA','snoRNA'),c("repeat","tRNAderived", "snRNAderived","cre","readthrough","antisense","intergenic"))
 
 p<- plot_deloc_significant(deloc_df %>% 
   dplyr::filter(annotation_type %in% c('intergenic', 'exons'), FPM>1, deloc_score_type=='trans', rna_type %in% mytypes1) %>%
   mutate(rna_type = factor(rna_type, levels = rev(mytypes1)), cell=factor(cell, levels=c('ES','DE')))) 
   
-
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.2, "in"), height=unit(1.75*10/5, "in"))
-plot_grid(p_fixed)
-
 fname="deloc.TRANS.intergenicANDexons.hist.noLncMRNA.pdf"
-ggsave2(here("figures/delocalization", fname), dpi=300)
-
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.2, panel.height=1.75*10/5)
+plot_grid(p_fixed)
 ```
 
 lncRNA mRNA
-```{r, fig.width=6}
+```{r, fig.width=2.1, fig.height=1.3}
 mytypes1  <- c("mRNA","lncRNA")
 
 p<- plot_deloc_significant(deloc_df %>% 
@@ -195,17 +180,15 @@ p<- plot_deloc_significant(deloc_df %>%
   mutate(rna_type = factor(rna_type, levels = rev(mytypes1)), cell=factor(cell, levels=c('ES','DE')))) 
   
 
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.2, "in"), height=unit(1.75*2/5, "in"))
-plot_grid(p_fixed)
-
 fname="deloc.TRANS.intergenicANDexons.hist.LncMRNAonly.pdf"
-ggsave2(here("figures/delocalization", fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.2, panel.height=1.75*2/5)
+plot_grid(p_fixed)
 
 ```
 # Catalog LNCrnas
 
 ## Prepare data
-```{r, fig.width=10}
+```{r}
 x<- deloc_df %>% 
   dplyr::filter(annotation_type %in% c('exons'), FPM>1,  rna_type == 'lncRNA', ambiguous!=2) %>%
   mutate(cell=factor(cell, levels=c('ES','DE'))) %>%
@@ -243,7 +226,7 @@ xtop20 = x %>%
 
 
 ## Plot ES
-```{r, fig.width=10}
+```{r, fig.width=2.7, fig.height=5}
 xtop20 %>% 
   dplyr::filter(cell=='ES') %>%
    #mutate(ENSG = forcats::fct_reorder(ENSG, (FPMmean))) %>%
@@ -260,13 +243,12 @@ xtop20 %>%
 
 
 fname="BBcatalog_top30.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*22/20, "in"))
-cowplot::plot_grid(p_fixed)
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=0.5, panel.height=4*22/20)
+plot_grid(p_fixed)
 ```
 
 ## Plot DE
-```{r, fig.width=10}
+```{r, fig.width=2.7, fig.height=5}
 xtop20 %>% 
   dplyr::filter(cell=='DE') %>%
    #mutate(ENSG = forcats::fct_reorder(ENSG, (FPMmean))) %>%
@@ -283,15 +265,14 @@ xtop20 %>%
 
 
 fname="BBcatalog_top30.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*22/20, "in"))
-cowplot::plot_grid(p_fixed)
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=0.5, panel.height=4*22/20)
+plot_grid(p_fixed)
 ```
 
 
 ## Plot expression
 
-```{r, fig.width=10}
+```{r, fig.width=1.9, fig.height=4.9}
  xtop20 %>% 
   mutate(cell = factor(cell, levels = c("ES","DE"))) %>%
   dplyr::filter(deloc_score_type=='cis') %>%
@@ -304,11 +285,9 @@ ggsave2(here('figures/delocalization',fname), dpi=300)
   theme(axis.text.y = element_blank(), axis.line.y = element_blank(), axis.ticks.y = element_blank(), axis.title = element_blank(), axis.text.x.top = element_text(angle=45, hjust=0), legend.position = "right", legend.direction = "vertical") ->p
 
 fname="BBcatalog.ESDE.expression.pdf"
-
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*22/20, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=0.5, panel.height=4*22/20)
 plot_grid(p_fixed)
 
-ggsave2(here('figures/delocalization',fname), dpi=300)
 ```
 
 
@@ -316,7 +295,7 @@ ggsave2(here('figures/delocalization',fname), dpi=300)
 
 ## Plot most abundant
 ### Prepare data
-```{r, fig.width=8}
+```{r}
 
 x2 <- 
    deloc_df %>% 
@@ -335,28 +314,7 @@ x2 <-
   ungroup() %>%
   arrange(desc(FPMmean)) %>%
   dplyr::filter(!GeneID %in% mygenesBB)
-  #dplyr::filter(p2<0.05) #%>% #, !is.nan(psum), np==2)
 
-# x2 <- tdscores_long  %>%
-#   #dplyr::filter(rnatype %in% c('exons'), D==0, FPM>1) %>%
-#    dplyr::filter(type_name.rep!="tRNA") %>%
-#   
-#  dplyr::filter(subtype3 %in% c("lncRNA"), rnatype=='exons',  FPM>0) %>%
-#   dplyr::filter(D %in% c(0,1000000)) %>%
-#   mutate(D = factor(D, levels = c(0,1000000))) %>%
-#   left_join(tdscores_long %>% dplyr::filter(rnatype=='exons', D==0) %>% dplyr::select(ENSG, cell, p.high.corr) %>% dplyr::rename(p0 = p.high.corr) ,
-#             by=c("ENSG","cell")) %>%
-#   group_by(ENSG, cell) %>%
-#   mutate(p = min(p.high.corr, na.rm=T), psum=sum(p.high.corr, na.rm = F), np=n()) %>%
-#   ungroup() %>%
-#   group_by(ENSG) %>%
-#   mutate(p2 = min(p, na.rm=T), FPMmean = mean(FPM, na.rm=T)) %>%
-#   ungroup() %>%
-#   arrange(desc(FPMmean)) %>%
-
-#   dplyr::filter(!ENSG %in% mygenesBB)
-
-#mygenes <- x %>% dplyr::select(ENSG, FPM) %>% unique() %>% arrange(desc(FPM)) %>% pull(ENSG) %>% 
 
 
 mygenesAbundant_top20 <- x2 %>% 
@@ -388,7 +346,7 @@ x2top20 = x2 %>%
 
 
 ### Most abundant ES
-```{r, fig.width=10}
+```{r, fig.width=2.9, fig.height=4.6}
 x2top20 %>% 
   dplyr::filter(cell=='ES') %>%
    #mutate(ENSG = forcats::fct_reorder(ENSG, (FPMmean))) %>%
@@ -405,14 +363,13 @@ x2top20 %>%
 
 
 fname="BBcatalog_mostAbundant.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*20/20, "in"))
-cowplot::plot_grid(p_fixed)
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=0.5, panel.height=4*20/20)
+plot_grid(p_fixed)
 ```
 
 
 ### Most abundant DE
-```{r, fig.width=10}
+```{r, fig.width=2.9, fig.height=4.6}
 x2top20 %>% 
   dplyr::filter(cell=='DE') %>%
    #mutate(ENSG = forcats::fct_reorder(ENSG, (FPMmean))) %>%
@@ -429,15 +386,14 @@ x2top20 %>%
 
 
 fname="BBcatalog_mostAbundant.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*20/20, "in"))
-cowplot::plot_grid(p_fixed)
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=0.5, panel.height=4*20/20)
+plot_grid(p_fixed)
 ```
 
 
 
 
-```{r, fig.width=10}
+```{r, fig.width=2.9, fig.height=4.6}
  x2top20 %>% 
   mutate(cell = factor(cell, levels = c("ES","DE"))) %>%
   dplyr::filter(deloc_score_type=='cis') %>%
@@ -451,14 +407,9 @@ ggsave2(here('figures/delocalization',fname), dpi=300)
 
 fname="BBcatalog_mostAbundant.ESDE.expression.pdf"
 
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*20/20, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=0.5, panel.height=4*20/20)
 plot_grid(p_fixed)
-
-ggsave2(here('figures/delocalization',fname), dpi=300)
 ```
-
-
-
 
 # Trans vs cis
 
@@ -526,20 +477,15 @@ d %>%
 ```
 
 
-
-
 ## lncRNA DE
 
-
-```{r}
+```{r, fig.width=5.3, fig.height=3.6}
 p<- plot_cVSt(deloc_df  %>%
   dplyr::filter(annotation_type %in% c('exons'), rna_type=='lncRNA', cell=='DE', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
 
 fname="transVsCisScore_scatter.lncrna.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
-cowplot::plot_grid(p_fixed)
-
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
+plot_grid(p_fixed)
 ```
 
 
@@ -547,116 +493,98 @@ ggsave2(here('figures/delocalization',fname), dpi=300)
 
 lncRNA ES
 
-```{r}
+```{r, fig.width=5.3, fig.height=3.6}
 p<- plot_cVSt(deloc_df  %>%
   dplyr::filter(annotation_type %in% c('exons'), rna_type=='lncRNA', cell=='ES', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
 
 fname="transVsCisScore_scatter.lncrna.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
-cowplot::plot_grid(p_fixed)
-
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
+plot_grid(p_fixed)
 ```
 
 mRNA ES
-```{r}
+```{r, fig.width=5.3, fig.height=3.6}
 p<- plot_cVSt(deloc_df  %>%
   dplyr::filter(annotation_type %in% c('exons'), rna_type=='mRNA', cell=='ES', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
 
 fname="transVsCisScore_scatter.mrna.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
-cowplot::plot_grid(p_fixed)
-
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
+plot_grid(p_fixed)
 ```
 
 mRNA DE
-```{r}
+```{r, fig.width=5.3, fig.height=3.6}
 p<- plot_cVSt(deloc_df  %>%
   dplyr::filter(annotation_type %in% c('exons'), rna_type=='mRNA', cell=='DE', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
 
 fname="transVsCisScore_scatter.mrna.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
-cowplot::plot_grid(p_fixed)
-
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
+plot_grid(p_fixed)
 ```
 
 
 mRNA introns ES
-```{r}
+```{r, fig.width=5.3, fig.height=3.6}
 p<- plot_cVSt(deloc_df  %>%
   dplyr::filter(annotation_type %in% c('introns'), rna_type=='mRNA', cell=='ES', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
 
 fname="transVsCisScore_scatter.mrnaINTRONS.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
-cowplot::plot_grid(p_fixed)
-
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
+plot_grid(p_fixed)
 ```
 
 mRNA introns DE
-```{r}
+```{r, fig.width=5.3, fig.height=3.6}
 p<- plot_cVSt(deloc_df  %>%
   dplyr::filter(annotation_type %in% c('introns'), rna_type=='mRNA', cell=='DE', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
 
 fname="transVsCisScore_scatter.mrnaINTRONS.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
-cowplot::plot_grid(p_fixed)
-
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
+plot_grid(p_fixed)
 ```
 
 
 lncRNA introns ES
-```{r}
+```{r, fig.width=5.3, fig.height=3.6}
 p<- plot_cVSt(deloc_df  %>%
   dplyr::filter(annotation_type %in% c('introns'), rna_type=='lncRNA', cell=='ES', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
 
 fname="transVsCisScore_scatter.lncrnaINTRONS.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
-cowplot::plot_grid(p_fixed)
-
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
+plot_grid(p_fixed)
 ```
 
 lncRNA introns DE
-```{r}
+```{r, fig.width=5.3, fig.height=3.6}
 p<- plot_cVSt(deloc_df  %>%
   dplyr::filter(annotation_type %in% c('introns'), rna_type=='lncRNA', cell=='DE', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
 
 fname="transVsCisScore_scatter.lncrnaINTRONS.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
-cowplot::plot_grid(p_fixed)
-
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
+plot_grid(p_fixed)
 ```
 
 INTERGENIC ES
 
 
-```{r}
+```{r, fig.width=5.3, fig.height=3.6}
 p<- plot_cVSt(deloc_df  %>%
   dplyr::filter(annotation_type %in% c('intergenic'), !rna_type %in% c('snRNAderived','tRNAderived'), cell=='ES', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
 
 fname="transVsCisScore_scatter.intergenic.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
-cowplot::plot_grid(p_fixed)
-
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
+plot_grid(p_fixed)
 ```
 
 
 INTERGENIC DE
-```{r}
+```{r, fig.width=5.3, fig.height=3.6}
 p<- plot_cVSt(deloc_df  %>%
   dplyr::filter(annotation_type %in% c('intergenic'), !rna_type %in% c('snRNAderived','tRNAderived'), cell=='DE', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
 
 fname="transVsCisScore_scatter.intergenic.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
-cowplot::plot_grid(p_fixed)
-
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
+plot_grid(p_fixed)
 ```
 
 # ES vs DE
@@ -737,26 +665,22 @@ ggsave2(here('figures/delocalization',fname), dpi=300)
 ```
 
 
-```{r}
+```{r, fig.width=5.8, fig.height=3.6}
 p<- plot_DEvsES(deloc_df  %>%
   dplyr::filter(annotation_type %in% c('exons'), rna_type == c('lncRNA'), deloc_score_type=='trans', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
 
 fname="ESVsDE_transDelocScore_scatter.lncRNA.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
-cowplot::plot_grid(p_fixed)
-
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
+plot_grid(p_fixed)
 ```
 
-```{r}
+```{r, fig.width=5.8, fig.height=3.6}
 p<- plot_DEvsES(deloc_df  %>%
   dplyr::filter(annotation_type %in% c('exons'), rna_type == c('lncRNA'), deloc_score_type=='cis', ambiguous!=2, FPM>1), nlabels=20, extralabs = c("CASC15"))
 
 fname="ESVsDE_cisDelocScore_scatter.lncRNA.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
-cowplot::plot_grid(p_fixed)
-
-ggsave2(here('figures/delocalization',fname), dpi=300)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
+plot_grid(p_fixed)
 ```
 
 

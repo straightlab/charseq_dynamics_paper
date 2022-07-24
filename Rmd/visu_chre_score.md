@@ -1,4 +1,4 @@
-Vidualization : Chromatin Enrichment scores
+Visualization : Chromatin Enrichment scores
 ================
 
 Load info
@@ -12,7 +12,7 @@ chredata <- read_parquet(here('../rdana/carnas/data-output/chromation_associatio
 # Chromatin-assocation score scatter
 
 ``` r
-plot_scatter_chrescore<- function(enr_data, ESorDE='ES', thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, nbottom=4, xloc=2.0, yloc=-2, extranames=c(), pw=1.9){
+plot_scatter_chrescore<- function(enr_data, ESorDE='ES', thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, nbottom=4, xloc=2.0, yloc=-2, extranames=c()){
    enr_data %>%
     mutate(issig=factor(case_when((!!sym(paste0("Chromatin_association_score_padj.",ESorDE))<thr_p)  & (!!sym(paste0("Chromatin_association_score.",ESorDE)))>log(thr_enr, base=2) ~ "enriched",(!!sym(paste0("Chromatin_association_score_padj.",ESorDE))<thr_p)  & (!!sym(paste0("Chromatin_association_score.",ESorDE)))<(-log(thr_enr, base=2)) ~ "depleted", T ~ "balanced"), levels=c("enriched","depleted","balanced"))) %>% 
     dplyr::filter((!!sym(paste0("FPM.",ESorDE,".char"))>thr_exp)) %>%
@@ -49,9 +49,6 @@ plot_scatter_chrescore<- function(enr_data, ESorDE='ES', thr_enr=3, thr_p=0.05, 
     
   theme_publish()+
   facet_rep_wrap(~rna_type, repeat.tick.labels=T) ->p
-  
-  p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "null"), width=unit(pw, "in"), height=unit(pw, "in"))
-  plot_grid(p_fixed)
 }
 ```
 
@@ -64,25 +61,25 @@ thr_enr = 3
  enr_data <- chredata %>%
   dplyr::filter(annotation_type=='intergenic') 
 
+fname0 = 'intergenicDETAILS'
+ 
 for (cell in c("ES","DE")) {
-plot_scatter_chrescore(enr_data, ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+p<- plot_scatter_chrescore(enr_data, ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
 
-ggsave2(here(paste0('figures/carnas/chrescore.intergenicDETAILS.', cell, '.scatter.pdf')))
+fname <- paste0('chrescore.',fname0, '.', cell, '.scatter.pdf')
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width=1.9, panel.height=1.9)
+
 }
 ```
 
-    ## Saving 7 x 10 in image
-    ## Saving 7 x 10 in image
+    ## [1] "fig.width=7, fig.height=8"
+    ## [1] "fig.width=7, fig.height=8"
 
 ``` r
-plot_scatter_chrescore(enr_data, ESorDE='ES', thr_enr=3, thr_p=0.05, thr_exp=0.1, xloc=2.0, yloc=-2, ntop = 4, pw=2.5)
+plot_grid(p_fixed)
 ```
 
 ![](visu_chre_score_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
-
-``` r
-#ggsave2(here(paste0('figures/carnas/chrescore.exons.', 'ES', '.scatter.pdf')))
-```
 
 ## Intergenic single panel
 
@@ -94,27 +91,27 @@ thr_enr = 3
   dplyr::filter(annotation_type=='intergenic')  %>%
    mutate(rna_type='intergenic')
 
+ 
+fname0 = 'intergenic'
+ 
 for (cell in c("ES","DE")) {
-plot_scatter_chrescore(enr_data, ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+p<- plot_scatter_chrescore(enr_data, ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
 
-ggsave2(here(paste0('figures/carnas/chrescore.intergenic.', cell, '.scatter.pdf')))
+fname <- paste0('chrescore.',fname0, '.', cell, '.scatter.pdf')
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width=2.5, panel.height=2.5)
+
 }
 ```
 
-    ## Saving 7 x 10 in image
-    ## Saving 7 x 10 in image
+    ## [1] "fig.width=3.1, fig.height=3.5"
+    ## [1] "fig.width=3.1, fig.height=3.5"
 
 ``` r
-plot_scatter_chrescore(enr_data, ESorDE='ES', thr_enr=3, thr_p=0.05, thr_exp=0.1, xloc=2.0, yloc=-2, ntop = 4, pw=2.5)
+plot_grid(p_fixed)
 ```
 
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
-
-``` r
-#ggsave2(here(paste0('figures/carnas/chrescore.exons.', 'ES', '.scatter.pdf')))
-```
-
-## Exons
+![](visu_chre_score_files/figure-gfm/unnamed-chunk-5-1.png)<!-- --> \##
+Exons
 
 ``` r
 thr_p = 0.05
@@ -125,19 +122,22 @@ enr_data = chredata %>%
   mutate(rna_type = factor(rna_type, levels = c("mRNA","lncRNA","ncRNA")))
 
 
-
+fname0 = 'exons'
+ 
 for (cell in c("ES","DE")) {
-plot_scatter_chrescore(enr_data, ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+p<- plot_scatter_chrescore(enr_data, ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
 
-ggsave2(here(paste0('figures/carnas/chrescore.exons.', cell, '.scatter.pdf')))
+fname <- paste0('chrescore.',fname0, '.', cell, '.scatter.pdf')
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width=1.9, panel.height=1.9)
+
 }
 ```
 
-    ## Saving 7 x 5 in image
-    ## Saving 7 x 5 in image
+    ## [1] "fig.width=7, fig.height=2.9"
+    ## [1] "fig.width=7, fig.height=2.9"
 
 ``` r
-plot_scatter_chrescore(enr_data, ESorDE='ES', thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+plot_grid(p_fixed)
 ```
 
 ![](visu_chre_score_files/figure-gfm/unnamed-chunk-6-1.png)<!-- --> \##
@@ -153,19 +153,22 @@ enr_data = chredata %>%
   dplyr::filter(rna_type %in% c("mRNA","lncRNA","snRNA","snoRNA","TEC","pseudogene","miRNA","ncRNA"))
 
 
-
+fname0 = 'exonsDETAILS'
+ 
 for (cell in c("ES","DE")) {
-plot_scatter_chrescore(enr_data, ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+p<- plot_scatter_chrescore(enr_data, ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
 
-ggsave2(here(paste0('figures/carnas/chrescore.exonsDETAILS.', cell, '.scatter.pdf')))
+fname <- paste0('chrescore.',fname0, '.', cell, '.scatter.pdf')
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width=1.9, panel.height=1.9)
+
 }
 ```
 
-    ## Saving 7 x 14 in image
-    ## Saving 7 x 14 in image
+    ## [1] "fig.width=7, fig.height=8"
+    ## [1] "fig.width=7, fig.height=8"
 
 ``` r
-plot_scatter_chrescore(enr_data, ESorDE='ES', thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+plot_grid(p_fixed)
 ```
 
 ![](visu_chre_score_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
@@ -180,20 +183,22 @@ enr_data = chredata %>%
   dplyr::filter(annotation_type=='introns', rna_type %in% c("mRNA","lncRNA","ncRNA"), ambiguous==0) %>%
   mutate(rna_type = factor(rna_type, levels = c("mRNA","lncRNA","ncRNA")))
 
-
-
+fname0 = 'introns'
+ 
 for (cell in c("ES","DE")) {
-plot_scatter_chrescore(enr_data, ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+p<- plot_scatter_chrescore(enr_data, ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
 
-ggsave2(here(paste0('figures/carnas/chrescore.introns.', cell, '.scatter.pdf')))
+fname <- paste0('chrescore.',fname0, '.', cell, '.scatter.pdf')
+p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width=1.9, panel.height=1.9)
+
 }
 ```
 
-    ## Saving 7 x 5 in image
-    ## Saving 7 x 5 in image
+    ## [1] "fig.width=7, fig.height=2.9"
+    ## [1] "fig.width=7, fig.height=2.9"
 
 ``` r
-plot_scatter_chrescore(enr_data, ESorDE='ES', thr_enr=3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+plot_grid(p_fixed)
 ```
 
 ![](visu_chre_score_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
@@ -207,7 +212,7 @@ plot_piechart_chaVSrna<- function(enr_data, ESorDE='ES', thr_enr=3, thr_p=0.05, 
     dplyr::filter((!!sym(paste0("FPM.",ESorDE,".char"))>thr_exp)) %>%
 dplyr::count(rna_type, issig) %>% group_by(rna_type) %>% mutate(n_percent=n/sum(n)*100, ntotal=sum(n)) %>% ungroup() 
   
-  p<- y %>% group_by(rna_type) %>% mutate(issig=factor(issig, levels=rev(c("enriched","depleted","balanced")))) %>% arrange(desc(issig)) %>% mutate(cumulative=cumsum(n_percent), midpoint = cumulative - n_percent / 2, yang = 90-(midpoint/100*365), name=paste0("",n)) %>% ungroup()  %>% ggplot(aes(x="", y=n_percent, fill=issig)) +
+  y %>% group_by(rna_type) %>% mutate(issig=factor(issig, levels=rev(c("enriched","depleted","balanced")))) %>% arrange(desc(issig)) %>% mutate(cumulative=cumsum(n_percent), midpoint = cumulative - n_percent / 2, yang = 90-(midpoint/100*365), name=paste0("",n)) %>% ungroup()  %>% ggplot(aes(x="", y=n_percent, fill=issig)) +
   geom_col(width=1) + 
     coord_polar("y")+
     scale_fill_manual(values=c(enriched="#A73030FF", depleted="#0073C2FF", balanced="#868686FF"))+
@@ -222,67 +227,39 @@ dplyr::count(rna_type, issig) %>% group_by(rna_type) %>% mutate(n_percent=n/sum(
   axis.ticks = element_blank(),
   axis.text.x=element_blank(),
    strip.text = element_text(size = 12),
-  text = element_text(size=12))
+  text = element_text(size=12)) ->p
 
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "null"), width=unit(0.8, "in"), height=unit(0.8, "in"))
-plot_grid(p_fixed)
-
+  return(p)
 } 
 ```
 
 ## exons introns
 
 ``` r
+out=list()
 for (cell in c("ES","DE")){
-plot_piechart_chaVSrna(chredata %>%
+  for (ei in c("exons", "introns")){
+p<- plot_piechart_chaVSrna(chredata %>%
   dplyr::filter(annotation_type=='exons', rna_type %in% c("mRNA","lncRNA","ncRNA"), ambiguous>-1) %>%
   mutate(rna_type = factor(rna_type, levels = c("mRNA","lncRNA","ncRNA"))), 
   ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1)
-  ggsave2(here(paste0('figures/carnas/chrescore.exons.',cell, '.pie.pdf')))
-  
-plot_piechart_chaVSrna(chredata %>%
-  dplyr::filter(annotation_type=='exons', rna_type %in% c("mRNA","lncRNA","ncRNA"), ambiguous>-1) %>%
-  mutate(rna_type = factor(rna_type, levels = c("mRNA","lncRNA","ncRNA"))),
-  ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1)
-  ggsave2(here(paste0('figures/carnas/chrescore.introns.',cell, '.pie.pdf')))
-  
+
+  fname <- paste0('chrescore.', ei, '.', cell, '.pie.pdf')
+  out[[paste0(cell, "_", ei)]]<- prettysave(p, here('figures/carnas', fname), panel.width=0.8, panel.height=0.8)
+  }
 }
 ```
 
-    ## Saving 7 x 5 in image
-    ## Saving 7 x 5 in image
-    ## Saving 7 x 5 in image
-    ## Saving 7 x 5 in image
+    ## [1] "fig.width=4.1, fig.height=1.4"
+    ## [1] "fig.width=4.1, fig.height=1.4"
+    ## [1] "fig.width=4.1, fig.height=1.4"
+    ## [1] "fig.width=4.1, fig.height=1.4"
 
 ``` r
-plot_piechart_chaVSrna(chredata %>%
-  dplyr::filter(annotation_type=='exons', rna_type %in% c("mRNA","lncRNA","ncRNA"), ambiguous>-1) %>%
-  mutate(rna_type = factor(rna_type, levels = c("mRNA","lncRNA","ncRNA"))), 
-  ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1)
+plot_grid(plotlist = out, nrow=2, labels= names(out))
 ```
 
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
-
-``` r
-  ggsave2(here(paste0('figures/carnas/chrescore.exons.',cell, '.pie.pdf')))
-```
-
-    ## Saving 7 x 5 in image
-
-``` r
-plot_piechart_chaVSrna(chredata %>%
-  dplyr::filter(annotation_type=='introns', rna_type %in% c("mRNA","lncRNA","ncRNA"), ambiguous>-1) %>%
-  mutate(rna_type = factor(rna_type, levels = c("mRNA","lncRNA","ncRNA"))), 
-  ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1)
-```
-
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-10-2.png)<!-- -->
-
-``` r
-  ggsave2(here(paste0('figures/carnas/chrescore.exons.',cell, '.pie.pdf')))
-```
-
-    ## Saving 7 x 5 in image
+![](visu_chre_score_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 ## ncRNAs details
 
@@ -292,33 +269,27 @@ enr_data = chredata %>%
   mutate(rna_type = factor(rna_subtype, levels = c("mRNA","lncRNA","snRNA","snoRNA","TEC","pseudogene","miRNA","ncRNA"))) %>%
   dplyr::filter(rna_type %in% c("mRNA","lncRNA","snRNA","snoRNA","TEC","pseudogene","miRNA","ncRNA"))
 
-
+out=list()
 for (cell in c("ES","DE")){
-plot_piechart_chaVSrna(enr_data %>% dplyr::filter(annotation_type=='exons'), ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1)
-  ggsave2(here(paste0('figures/carnas/chrescore.exonsDETAILS.',cell, '.pie.pdf')))
-  
-plot_piechart_chaVSrna(enr_data %>% dplyr::filter(annotation_type=='introns'), ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1)
-  ggsave2(here(paste0('figures/carnas/chrescore.intronsDETAILS.',cell, '.pie.pdf')))
-  
+  for (ei in c("exons", "introns")){
+
+p<- plot_piechart_chaVSrna(enr_data %>% dplyr::filter(annotation_type==ei), ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1)
+ fname <- paste0('chrescore.', ei, 'DETAILS.', cell, '.pie.pdf')
+  out[[paste0(cell, "_", ei)]]<- prettysave(p, here('figures/carnas', fname), panel.width=0.8, panel.height=0.8)
+  }
 }
 ```
 
-    ## Saving 7 x 5 in image
-    ## Saving 7 x 5 in image
-    ## Saving 7 x 5 in image
-    ## Saving 7 x 5 in image
+    ## [1] "fig.width=4.1, fig.height=3.7"
+    ## [1] "fig.width=4.1, fig.height=2.6"
+    ## [1] "fig.width=4.1, fig.height=3.7"
+    ## [1] "fig.width=4.1, fig.height=2.6"
 
 ``` r
-plot_piechart_chaVSrna(enr_data %>% dplyr::filter(annotation_type=='exons'), ESorDE='ES', thr_enr=3, thr_p=0.05, thr_exp=0.1)
+plot_grid(plotlist = out, nrow=2, labels= names(out))
 ```
 
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
-
-``` r
-plot_piechart_chaVSrna(enr_data %>% dplyr::filter(annotation_type=='introns'), ESorDE='ES', thr_enr=3, thr_p=0.05, thr_exp=0.1)
-```
-
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-11-2.png)<!-- -->
+![](visu_chre_score_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
 ## Intergenic
 
@@ -328,21 +299,22 @@ enr_data = chredata %>%
   # mutate(rna_type = factor(rna_subtype, levels = c("mRNA","lncRNA","snRNA","snoRNA","TEC","pseudogene","miRNA","ncRNA"))) %>%
   # dplyr::filter(rna_type %in% c("mRNA","lncRNA","snRNA","snoRNA","TEC","pseudogene","miRNA","ncRNA"))
 
-
+out = list()
 for (cell in c("ES","DE")){
-plot_piechart_chaVSrna(enr_data , ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1)
-  ggsave2(here(paste0('figures/carnas/chrescore.intergenicDETAIL.',cell, '.pie.pdf')))
+p<- plot_piechart_chaVSrna(enr_data , ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1)
+   fname <- paste0('chrescore.', 'intergenic', 'DETAILS.', cell, '.pie.pdf')
+  out[[paste0(cell, "_", 'UTL')]]<- prettysave(p, here('figures/carnas', fname), panel.width=0.8, panel.height=0.8)
 }
 ```
 
-    ## Saving 7 x 5 in image
-    ## Saving 7 x 5 in image
+    ## [1] "fig.width=4.1, fig.height=3.7"
+    ## [1] "fig.width=4.1, fig.height=3.7"
 
 ``` r
-plot_piechart_chaVSrna(enr_data , ESorDE='ES', thr_enr=3, thr_p=0.05, thr_exp=0.1)
+plot_grid(plotlist = out, nrow=1, labels= names(out))
 ```
 
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](visu_chre_score_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 ## Intergenic total
 
@@ -353,23 +325,22 @@ enr_data = chredata %>%
   # mutate(rna_type = factor(rna_subtype, levels = c("mRNA","lncRNA","snRNA","snoRNA","TEC","pseudogene","miRNA","ncRNA"))) %>%
   # dplyr::filter(rna_type %in% c("mRNA","lncRNA","snRNA","snoRNA","TEC","pseudogene","miRNA","ncRNA"))
 
-
+out = list()
 for (cell in c("ES","DE")){
-plot_piechart_chaVSrna(enr_data , ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1)
-  ggsave2(here(paste0('figures/carnas/chrescore.intergenic.',cell, '.pie.pdf')))
-  
-  
+p<- plot_piechart_chaVSrna(enr_data , ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1)
+   fname <- paste0('chrescore.', 'intergenic', '', cell, '.pie.pdf')
+  out[[paste0(cell, "_", 'UTL')]]<- prettysave(p, here('figures/carnas', fname), panel.width=0.8, panel.height=0.8)
 }
 ```
 
-    ## Saving 7 x 5 in image
-    ## Saving 7 x 5 in image
+    ## [1] "fig.width=2.3, fig.height=1.4"
+    ## [1] "fig.width=2.3, fig.height=1.4"
 
 ``` r
-plot_piechart_chaVSrna(enr_data , ESorDE='ES', thr_enr=3, thr_p=0.05, thr_exp=0.1)
+plot_grid(plotlist = out, nrow=1, labels= names(out))
 ```
 
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+![](visu_chre_score_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 # Diff chre score ES vs DE
 
@@ -417,8 +388,7 @@ enr_data %>%
   theme_publish()+
   facet_rep_wrap(~rna_type, repeat.tick.labels=T) ->p
   
-  p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "null"), width=unit(1.9, "in"), height=unit(1.9, "in"))
-  plot_grid(p_fixed)
+ return(p)
 }
 ```
 
@@ -428,62 +398,74 @@ enr_data %>%
 plot_chre_DEvsES(chredata %>%
                    dplyr::filter(annotation_type=='exons', rna_type %in% c("mRNA","lncRNA","ncRNA"), ambiguous>-1) %>%
                    dplyr::mutate(rna_type =factor(rna_type, levels=c("mRNA","lncRNA","ncRNA"))) %>%
-  dplyr::filter(annotation_type=='exons'), thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+  dplyr::filter(annotation_type=='exons'), thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2) ->p
+
+  fname = 'chrescore.DEvsES.exons.scatter.pdf'
+  p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width=1.9, panel.height=1.9)  
 ```
 
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+    ## [1] "fig.width=7, fig.height=2.8"
 
 ``` r
-  ggsave2(here('figures/carnas/chrescore.DEvsES.exons.scatter.pdf'))
+  plot_grid(p_fixed)
 ```
 
-    ## Saving 8 x 5 in image
+![](visu_chre_score_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
 ``` r
 plot_chre_DEvsES(chredata %>%
                    dplyr::filter(annotation_type=='exons', rna_type %in% c("lncRNA"), ambiguous>-1) %>%
                    dplyr::mutate(rna_type =factor(rna_type, levels=c("lncRNA"))) %>%
-  dplyr::filter(annotation_type=='exons'), thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+  dplyr::filter(annotation_type=='exons'), thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2) ->p
+  
+   fname = 'chrescore.DEvsES.exonsLNCRNA.scatter.pdf'
+  p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width=1.9, panel.height=1.9)  
 ```
 
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+    ## [1] "fig.width=2.5, fig.height=2.8"
 
 ``` r
-  ggsave2(here('figures/carnas/chrescore.DEvsES.exonsLNCRNA.scatter.pdf'))
+  plot_grid(p_fixed)
 ```
 
-    ## Saving 7 x 5 in image
+![](visu_chre_score_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
 
 ## Introns
 
 ``` r
 plot_chre_DEvsES(chredata %>%
                    dplyr::filter(annotation_type=='introns', rna_type %in% c("mRNA","lncRNA","ncRNA"), ambiguous >-1) %>%
-                   dplyr::mutate(rna_type =factor(rna_type, levels=c("mRNA","lncRNA","ncRNA"))) , thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+                   dplyr::mutate(rna_type =factor(rna_type, levels=c("mRNA","lncRNA","ncRNA"))) , thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)->p
+  
+   fname = 'chrescore.DEvsES.introns.scatter.pdf'
+  p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width=1.9, panel.height=1.9)  
 ```
 
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+    ## [1] "fig.width=6.9, fig.height=2.8"
 
 ``` r
-  ggsave2(here('figures/carnas/chrescore.DEvsES.introns.scatter.pdf'))
+  plot_grid(p_fixed)
 ```
 
-    ## Saving 8 x 5 in image
+![](visu_chre_score_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
 
 ## intergenic
 
 ``` r
 plot_chre_DEvsES(chredata %>%
-                   dplyr::filter(annotation_type=='intergenic') , thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+                   dplyr::filter(annotation_type=='intergenic') , thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2) ->p
+  
+   fname = 'chrescore.DEvsES.intergenic.scatter.pdf'
+  p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width=1.9, panel.height=1.9)  
 ```
 
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+    ## [1] "fig.width=7, fig.height=7.9"
 
 ``` r
-  ggsave2(here('figures/carnas/chrescore.DEvsES.intergenic.scatter.pdf'))
+  plot_grid(p_fixed)
 ```
 
-    ## Saving 12 x 5 in image
+![](visu_chre_score_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
 
 # Pie char diff chre DE vs ES
 
@@ -499,7 +481,7 @@ dplyr::count(rna_type, issig) %>% group_by(rna_type) %>% mutate(n_percent=n/sum(
   
   y <- y %>% left_join(ydeg %>% dplyr::select(rna_type, ndeg))
   
-  p<- y %>% group_by(rna_type) %>% mutate(issig=factor(issig, levels=rev(c("DE","ES","none")))) %>% arrange(desc(issig)) %>% mutate(cumulative=cumsum(n_percent), midpoint = cumulative - n_percent / 2, yang = 90-(midpoint/100*365), name=paste0("",n)) %>% ungroup()  %>% ggplot(aes(x="", y=n_percent, fill=issig)) +
+  y %>% group_by(rna_type) %>% mutate(issig=factor(issig, levels=rev(c("DE","ES","none")))) %>% arrange(desc(issig)) %>% mutate(cumulative=cumsum(n_percent), midpoint = cumulative - n_percent / 2, yang = 90-(midpoint/100*365), name=paste0("",n)) %>% ungroup()  %>% ggplot(aes(x="", y=n_percent, fill=issig)) +
   geom_col(width=1) + 
     coord_polar("y")+
     scale_fill_manual(values=c(none='grey', ES="cornflowerblue", DE="gold3"))+
@@ -514,10 +496,9 @@ dplyr::count(rna_type, issig) %>% group_by(rna_type) %>% mutate(n_percent=n/sum(
   axis.ticks = element_blank(),
   axis.text.x=element_blank(),
    strip.text = element_text(size = 12),
-  text = element_text(size=12))
-
-p_fixed <- egg::set_panel_size(p=p, margin = unit(0, "null"), width=unit(0.8, "in"), height=unit(0.8, "in"))
-plot_grid(p_fixed)
+  text = element_text(size=12)) ->p
+  
+  return(p)
 
 } 
 ```
@@ -528,35 +509,45 @@ plot_grid(p_fixed)
 plot_piechart_diffchre(chredata %>%
                    dplyr::filter(annotation_type=='exons', rna_type %in% c("mRNA","lncRNA","ncRNA"), ambiguous>-1) %>%
                    dplyr::mutate(rna_type =factor(rna_type, levels=c("mRNA","lncRNA","ncRNA"))) %>%
-  dplyr::filter(annotation_type=='exons'), thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+  dplyr::filter(annotation_type=='exons'), thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2) ->p
 ```
 
     ## Joining, by = "rna_type"
 
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
-
 ``` r
-ggsave2(here('figures/carnas/chrescore.DEvsES.exons.pie.pdf'))
+ fname <-'chrescore.DEvsES.exons.pie.pdf'
+p_fixed <- prettysave(p, here('figures/carnas', fname), panel.width=0.8, panel.height=0.8)
 ```
 
-    ## Saving 7 x 5 in image
+    ## [1] "fig.width=3.8, fig.height=1.4"
+
+``` r
+plot_grid(p_fixed)
+```
+
+![](visu_chre_score_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
 
 ## intergenic
 
 ``` r
 plot_piechart_diffchre(chredata %>%
-                   dplyr::filter(annotation_type=='intergenic') , thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+                   dplyr::filter(annotation_type=='intergenic') , thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2) ->p
 ```
 
     ## Joining, by = "rna_type"
 
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
-
 ``` r
-ggsave2(here('figures/carnas/chrescore.DEvsES.intergenic.pie.pdf'))
+ fname <-'chrescore.DEvsES.intergenic.pie.pdf'
+p_fixed <- prettysave(p, here('figures/carnas', fname), panel.width=0.8, panel.height=0.8)
 ```
 
-    ## Saving 10 x 5 in image
+    ## [1] "fig.width=3.8, fig.height=3.7"
+
+``` r
+plot_grid(p_fixed)
+```
+
+![](visu_chre_score_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
 
 ## Introns
 
@@ -564,15 +555,20 @@ ggsave2(here('figures/carnas/chrescore.DEvsES.intergenic.pie.pdf'))
 plot_piechart_diffchre(chredata %>%
                    dplyr::filter(annotation_type=='introns', rna_type %in% c("mRNA","lncRNA","ncRNA"), ambiguous>-1) %>%
                    dplyr::mutate(rna_type =factor(rna_type, levels=c("mRNA","lncRNA","ncRNA"))) %>%
-  dplyr::filter(annotation_type=='introns'), thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2)
+  dplyr::filter(annotation_type=='introns'), thr_enr=1.3, thr_p=0.05, thr_exp=0.1, ntop=4, xloc=2.0, yloc=-2) ->p
 ```
 
     ## Joining, by = "rna_type"
 
-![](visu_chre_score_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
-
 ``` r
-ggsave2(here('figures/carnas/chrescore.DEvsES.introns.pie.pdf'))
+ fname <-'chrescore.DEvsES.introns.pie.pdf'
+p_fixed <- prettysave(p, here('figures/carnas', fname), panel.width=0.8, panel.height=0.8)
 ```
 
-    ## Saving 7 x 5 in image
+    ## [1] "fig.width=3.8, fig.height=1.4"
+
+``` r
+plot_grid(p_fixed)
+```
+
+![](visu_chre_score_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->

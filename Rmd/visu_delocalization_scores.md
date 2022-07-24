@@ -20,28 +20,6 @@ deloc_df <- delocdata %>%
   mutate(rna_type = if_else(rna_type=='ncRNA', rna_subtype, rna_type))
 ```
 
-``` r
-deloc_df
-```
-
-    ## # A tibble: 242,505 × 19
-    ##    deloc_score_type cell  GeneID      annotation_type name  rna_type rna_subtype
-    ##    <fct>            <chr> <chr>       <chr>           <chr> <chr>    <chr>      
-    ##  1 trans            DE    ENSG000002… exons           SNHG… lncRNA   lncRNA     
-    ##  2 trans            DE    ENSG000002… exons           SNOR… snoRNA   snoRNA     
-    ##  3 trans            DE    ENSG000002… exons           SNOR… snoRNA   snoRNA     
-    ##  4 trans            DE    ENSG000002… exons           SNOR… snoRNA   snoRNA     
-    ##  5 trans            DE    ENSG000002… exons           MIR4… miRNA    miRNA      
-    ##  6 trans            DE    ENSG000002… exons           SCAR… snoRNA   snoRNA     
-    ##  7 trans            DE    ENSG000002… exons           SNOR… snoRNA   snoRNA     
-    ##  8 trans            DE    ENSG000002… exons           RNU5… snRNA    snRNA      
-    ##  9 trans            DE    ENSG000002… exons           SNOR… snoRNA   snoRNA     
-    ## 10 trans            DE    ENSG000002… exons           SNOR… snoRNA   snoRNA     
-    ## # … with 242,495 more rows, and 12 more variables: ambiguous <dbl>,
-    ## #   delocalization_score.calibrated <dbl>, delocalization_score.raw <dbl>,
-    ## #   r.est <dbl>, r.obs <dbl>, Nnear <dbl>, Nfar <dbl>, p.high <dbl>,
-    ## #   p.low <dbl>, p.high.corr <dbl>, p.low.corr <dbl>, FPM <dbl>
-
 # Densities
 
 ``` r
@@ -79,17 +57,17 @@ p <- plot_deloc_halfeye(mydata) + labs(x="Trans delocalization\nscore", y=NULL)
 
 ``` r
 fname="delocscore.density.byclass.intergenicANDexons.halfeye.trans.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.5, "in"), height=unit(1.75*12/5, "in"))
+
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.5, panel.height=1.75*12/5)
+```
+
+    ## [1] "fig.width=2.8, fig.height=5"
+
+``` r
 plot_grid(p_fixed)
 ```
 
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/delocalization", fname), dpi=300)
-```
-
-    ## Saving 8 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 ``` r
 mydata <- deloc_df %>% 
@@ -104,17 +82,17 @@ p <- plot_deloc_halfeye(mydata) + labs(x="Cis delocalization\nscore", y=NULL)
 
 ``` r
 fname="delocscore.density.byclass.intergenicANDexons.halfeye.trans.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.5, "in"), height=unit(1.75*12/5, "in"))
+
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.5, panel.height=1.75*12/5)
+```
+
+    ## [1] "fig.width=2.8, fig.height=5"
+
+``` r
 plot_grid(p_fixed)
 ```
 
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
-
-``` r
-ggsave2(here("figures/delocalization", fname), dpi=300)
-```
-
-    ## Saving 8 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 # Census of delocalized RNAs
 
@@ -163,19 +141,17 @@ p<- plot_deloc_significant(deloc_df %>%
   dplyr::filter(annotation_type %in% c('intergenic', 'exons'), FPM>1, deloc_score_type=='cis', rna_type %in% mytypes1) %>%
   mutate(rna_type = factor(rna_type, levels = rev(mytypes1)), cell=factor(cell, levels=c('ES','DE')))) 
   
+fname="deloc.CIS.intergenicANDexons.hist.noLncMRNA.pdf"
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.2, panel.height=1.75*10/5)
+```
 
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.2, "in"), height=unit(1.75*10/5, "in"))
+    ## [1] "fig.width=2.1, fig.height=4.2"
+
+``` r
 plot_grid(p_fixed)
 ```
 
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
-
-``` r
-fname="deloc.CIS.intergenicANDexons.hist.noLncMRNA.pdf"
-ggsave2(here("figures/delocalization", fname), dpi=300)
-```
-
-    ## Saving 6 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 lncRNA mRNA
 
@@ -187,22 +163,18 @@ p<- plot_deloc_significant(deloc_df %>%
   mutate(rna_type = factor(rna_type, levels = rev(mytypes1)), cell=factor(cell, levels=c('ES','DE')))) 
   
 
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.2, "in"), height=unit(1.75*2/5, "in"))
+fname="deloc.CIS.intergenicANDexons.hist.LncMRNAonly.pdf"
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.2, panel.height=1.75*2/5)
+```
+
+    ## [1] "fig.width=2.1, fig.height=1.4"
+
+``` r
 plot_grid(p_fixed)
 ```
 
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
-
-``` r
-fname="deloc.CIS.intergenicANDexons.hist.LncMRNAonly.pdf"
-ggsave2(here("figures/delocalization", fname), dpi=300)
-```
-
-    ## Saving 6 x 5 in image
-
-## TRANS
-
-Without lncRNA mRNA
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+\## TRANS Without lncRNA mRNA
 
 ``` r
 mytypes1  <- c(c('snRNA','snoRNA'),c("repeat","tRNAderived", "snRNAderived","cre","readthrough","antisense","intergenic"))
@@ -211,19 +183,17 @@ p<- plot_deloc_significant(deloc_df %>%
   dplyr::filter(annotation_type %in% c('intergenic', 'exons'), FPM>1, deloc_score_type=='trans', rna_type %in% mytypes1) %>%
   mutate(rna_type = factor(rna_type, levels = rev(mytypes1)), cell=factor(cell, levels=c('ES','DE')))) 
   
+fname="deloc.TRANS.intergenicANDexons.hist.noLncMRNA.pdf"
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.2, panel.height=1.75*10/5)
+```
 
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.2, "in"), height=unit(1.75*10/5, "in"))
+    ## [1] "fig.width=2.1, fig.height=4.2"
+
+``` r
 plot_grid(p_fixed)
 ```
 
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
-
-``` r
-fname="deloc.TRANS.intergenicANDexons.hist.noLncMRNA.pdf"
-ggsave2(here("figures/delocalization", fname), dpi=300)
-```
-
-    ## Saving 6 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 lncRNA mRNA
 
@@ -235,20 +205,18 @@ p<- plot_deloc_significant(deloc_df %>%
   mutate(rna_type = factor(rna_type, levels = rev(mytypes1)), cell=factor(cell, levels=c('ES','DE')))) 
   
 
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(1.2, "in"), height=unit(1.75*2/5, "in"))
+fname="deloc.TRANS.intergenicANDexons.hist.LncMRNAonly.pdf"
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.2, panel.height=1.75*2/5)
+```
+
+    ## [1] "fig.width=2.1, fig.height=1.3"
+
+``` r
 plot_grid(p_fixed)
 ```
 
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
-
-``` r
-fname="deloc.TRANS.intergenicANDexons.hist.LncMRNAonly.pdf"
-ggsave2(here("figures/delocalization", fname), dpi=300)
-```
-
-    ## Saving 6 x 5 in image
-
-# Catalog LNCrnas
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+\# Catalog LNCrnas
 
 ## Prepare data
 
@@ -304,17 +272,16 @@ xtop20 %>%
 
 
 fname="BBcatalog_top30.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*22/20, "in"))
-cowplot::plot_grid(p_fixed)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=0.5, panel.height=4*22/20)
 ```
 
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+    ## [1] "fig.width=2.7, fig.height=5"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 10 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 ## Plot DE
 
@@ -335,17 +302,16 @@ xtop20 %>%
 
 
 fname="BBcatalog_top30.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*22/20, "in"))
-cowplot::plot_grid(p_fixed)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=0.5, panel.height=4*22/20)
 ```
 
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+    ## [1] "fig.width=2.7, fig.height=5"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 10 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 ## Plot expression
 
@@ -362,18 +328,16 @@ ggsave2(here('figures/delocalization',fname), dpi=300)
   theme(axis.text.y = element_blank(), axis.line.y = element_blank(), axis.ticks.y = element_blank(), axis.title = element_blank(), axis.text.x.top = element_text(angle=45, hjust=0), legend.position = "right", legend.direction = "vertical") ->p
 
 fname="BBcatalog.ESDE.expression.pdf"
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=0.5, panel.height=4*22/20)
+```
 
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*22/20, "in"))
+    ## [1] "fig.width=1.9, fig.height=4.9"
+
+``` r
 plot_grid(p_fixed)
 ```
 
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
-
-``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
-```
-
-    ## Saving 10 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
 ## Plot most abundant
 
@@ -397,28 +361,7 @@ x2 <-
   ungroup() %>%
   arrange(desc(FPMmean)) %>%
   dplyr::filter(!GeneID %in% mygenesBB)
-  #dplyr::filter(p2<0.05) #%>% #, !is.nan(psum), np==2)
 
-# x2 <- tdscores_long  %>%
-#   #dplyr::filter(rnatype %in% c('exons'), D==0, FPM>1) %>%
-#    dplyr::filter(type_name.rep!="tRNA") %>%
-#   
-#  dplyr::filter(subtype3 %in% c("lncRNA"), rnatype=='exons',  FPM>0) %>%
-#   dplyr::filter(D %in% c(0,1000000)) %>%
-#   mutate(D = factor(D, levels = c(0,1000000))) %>%
-#   left_join(tdscores_long %>% dplyr::filter(rnatype=='exons', D==0) %>% dplyr::select(ENSG, cell, p.high.corr) %>% dplyr::rename(p0 = p.high.corr) ,
-#             by=c("ENSG","cell")) %>%
-#   group_by(ENSG, cell) %>%
-#   mutate(p = min(p.high.corr, na.rm=T), psum=sum(p.high.corr, na.rm = F), np=n()) %>%
-#   ungroup() %>%
-#   group_by(ENSG) %>%
-#   mutate(p2 = min(p, na.rm=T), FPMmean = mean(FPM, na.rm=T)) %>%
-#   ungroup() %>%
-#   arrange(desc(FPMmean)) %>%
-
-#   dplyr::filter(!ENSG %in% mygenesBB)
-
-#mygenes <- x %>% dplyr::select(ENSG, FPM) %>% unique() %>% arrange(desc(FPM)) %>% pull(ENSG) %>% 
 
 
 mygenesAbundant_top20 <- x2 %>% 
@@ -465,17 +408,16 @@ x2top20 %>%
 
 
 fname="BBcatalog_mostAbundant.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*20/20, "in"))
-cowplot::plot_grid(p_fixed)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=0.5, panel.height=4*20/20)
 ```
 
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
+    ## [1] "fig.width=2.9, fig.height=4.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 10 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
 
 ### Most abundant DE
 
@@ -496,17 +438,16 @@ x2top20 %>%
 
 
 fname="BBcatalog_mostAbundant.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*20/20, "in"))
-cowplot::plot_grid(p_fixed)
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=0.5, panel.height=4*20/20)
 ```
 
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+    ## [1] "fig.width=2.9, fig.height=4.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 10 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
 ``` r
  x2top20 %>% 
@@ -522,17 +463,16 @@ ggsave2(here('figures/delocalization',fname), dpi=300)
 
 fname="BBcatalog_mostAbundant.ESDE.expression.pdf"
 
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(0.5, "in"), height=unit(4*20/20, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=0.5, panel.height=4*20/20)
+```
+
+    ## [1] "fig.width=1.9, fig.height=4.5"
+
+``` r
 plot_grid(p_fixed)
 ```
 
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
-
-``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
-```
-
-    ## Saving 10 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
 
 # Trans vs cis
 
@@ -608,7 +548,7 @@ p<- plot_cVSt(deloc_df  %>%
 
 ``` r
 fname="transVsCisScore_scatter.lncrna.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
 ```
 
     ## `geom_smooth()` using formula 'y ~ x'
@@ -619,17 +559,13 @@ p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), h
 
     ## Warning: Removed 33 rows containing missing values (geom_point).
 
-``` r
-cowplot::plot_grid(p_fixed)
-```
-
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
+    ## [1] "fig.width=5.3, fig.height=3.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 7 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
 
 lncRNA ES
 
@@ -642,7 +578,7 @@ p<- plot_cVSt(deloc_df  %>%
 
 ``` r
 fname="transVsCisScore_scatter.lncrna.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
 ```
 
     ## `geom_smooth()` using formula 'y ~ x'
@@ -653,17 +589,13 @@ p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), h
 
     ## Warning: Removed 51 rows containing missing values (geom_point).
 
-``` r
-cowplot::plot_grid(p_fixed)
-```
-
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
+    ## [1] "fig.width=5.1, fig.height=3.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 7 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
 
 mRNA ES
 
@@ -676,7 +608,7 @@ p<- plot_cVSt(deloc_df  %>%
 
 ``` r
 fname="transVsCisScore_scatter.mrna.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
 ```
 
     ## `geom_smooth()` using formula 'y ~ x'
@@ -687,17 +619,13 @@ p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), h
 
     ## Warning: Removed 290 rows containing missing values (geom_point).
 
-``` r
-cowplot::plot_grid(p_fixed)
-```
-
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
+    ## [1] "fig.width=5.1, fig.height=3.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 7 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
 
 mRNA DE
 
@@ -710,7 +638,7 @@ p<- plot_cVSt(deloc_df  %>%
 
 ``` r
 fname="transVsCisScore_scatter.mrna.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
 ```
 
     ## `geom_smooth()` using formula 'y ~ x'
@@ -721,17 +649,13 @@ p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), h
 
     ## Warning: Removed 98 rows containing missing values (geom_point).
 
-``` r
-cowplot::plot_grid(p_fixed)
-```
-
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
+    ## [1] "fig.width=5.1, fig.height=3.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 7 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
 
 mRNA introns ES
 
@@ -744,7 +668,7 @@ p<- plot_cVSt(deloc_df  %>%
 
 ``` r
 fname="transVsCisScore_scatter.mrnaINTRONS.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
 ```
 
     ## `geom_smooth()` using formula 'y ~ x'
@@ -755,17 +679,13 @@ p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), h
 
     ## Warning: Removed 190 rows containing missing values (geom_point).
 
-``` r
-cowplot::plot_grid(p_fixed)
-```
-
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+    ## [1] "fig.width=5.1, fig.height=3.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 7 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
 
 mRNA introns DE
 
@@ -778,7 +698,7 @@ p<- plot_cVSt(deloc_df  %>%
 
 ``` r
 fname="transVsCisScore_scatter.mrnaINTRONS.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
 ```
 
     ## `geom_smooth()` using formula 'y ~ x'
@@ -789,17 +709,13 @@ p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), h
 
     ## Warning: Removed 75 rows containing missing values (geom_point).
 
-``` r
-cowplot::plot_grid(p_fixed)
-```
-
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+    ## [1] "fig.width=5.1, fig.height=3.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 7 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
 
 lncRNA introns ES
 
@@ -812,7 +728,7 @@ p<- plot_cVSt(deloc_df  %>%
 
 ``` r
 fname="transVsCisScore_scatter.lncrnaINTRONS.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
 ```
 
     ## `geom_smooth()` using formula 'y ~ x'
@@ -823,17 +739,13 @@ p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), h
 
     ## Warning: Removed 186 rows containing missing values (geom_point).
 
-``` r
-cowplot::plot_grid(p_fixed)
-```
-
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+    ## [1] "fig.width=5.1, fig.height=3.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 7 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
 
 lncRNA introns DE
 
@@ -846,7 +758,7 @@ p<- plot_cVSt(deloc_df  %>%
 
 ``` r
 fname="transVsCisScore_scatter.lncrnaINTRONS.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
 ```
 
     ## `geom_smooth()` using formula 'y ~ x'
@@ -857,17 +769,13 @@ p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), h
 
     ## Warning: Removed 59 rows containing missing values (geom_point).
 
-``` r
-cowplot::plot_grid(p_fixed)
-```
-
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+    ## [1] "fig.width=5.1, fig.height=3.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 7 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
 
 INTERGENIC ES
 
@@ -880,7 +788,7 @@ p<- plot_cVSt(deloc_df  %>%
 
 ``` r
 fname="transVsCisScore_scatter.intergenic.ES.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
 ```
 
     ## `geom_smooth()` using formula 'y ~ x'
@@ -891,17 +799,13 @@ p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), h
 
     ## Warning: Removed 350 rows containing missing values (geom_point).
 
-``` r
-cowplot::plot_grid(p_fixed)
-```
-
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+    ## [1] "fig.width=5.1, fig.height=3.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 7 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
 
 INTERGENIC DE
 
@@ -914,7 +818,7 @@ p<- plot_cVSt(deloc_df  %>%
 
 ``` r
 fname="transVsCisScore_scatter.intergenic.DE.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
 ```
 
     ## `geom_smooth()` using formula 'y ~ x'
@@ -925,17 +829,13 @@ p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), h
 
     ## Warning: Removed 243 rows containing missing values (geom_point).
 
-``` r
-cowplot::plot_grid(p_fixed)
-```
-
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
+    ## [1] "fig.width=5.1, fig.height=3.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 7 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
 
 # ES vs DE
 
@@ -1025,7 +925,7 @@ p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), h
 cowplot::plot_grid(p_fixed)
 ```
 
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
 
 ``` r
 ggsave2(here('figures/delocalization',fname), dpi=300)
@@ -1042,7 +942,7 @@ p<- plot_DEvsES(deloc_df  %>%
 
 ``` r
 fname="ESVsDE_transDelocScore_scatter.lncRNA.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
 ```
 
     ## `geom_smooth()` using formula 'y ~ x'
@@ -1055,17 +955,13 @@ p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), h
 
     ## Warning: Removed 5 rows containing missing values (geom_text_repel).
 
-``` r
-cowplot::plot_grid(p_fixed)
-```
-
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-35-1.png)<!-- -->
+    ## [1] "fig.width=5.8, fig.height=3.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 7 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
 
 ``` r
 p<- plot_DEvsES(deloc_df  %>%
@@ -1076,7 +972,7 @@ p<- plot_DEvsES(deloc_df  %>%
 
 ``` r
 fname="ESVsDE_cisDelocScore_scatter.lncRNA.pdf"
-p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), height=unit(3, "in"))
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=3, panel.height=3)
 ```
 
     ## `geom_smooth()` using formula 'y ~ x'
@@ -1089,14 +985,10 @@ p_fixed <- egg::set_panel_size(p, margin = unit(1, "in"), width=unit(3, "in"), h
 
     ## Warning: Removed 1 rows containing missing values (geom_text_repel).
 
-``` r
-cowplot::plot_grid(p_fixed)
-```
-
-![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->
+    ## [1] "fig.width=6, fig.height=3.6"
 
 ``` r
-ggsave2(here('figures/delocalization',fname), dpi=300)
+plot_grid(p_fixed)
 ```
 
-    ## Saving 7 x 5 in image
+![](visu_delocalization_scores_files/figure-gfm/unnamed-chunk-35-1.png)<!-- -->
