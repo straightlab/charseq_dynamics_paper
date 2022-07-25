@@ -1,5 +1,9 @@
 # charseq_dynamics_paper
 
+## Core computations
+
+- [Differential expression and chromatin assocation](Rmd/compute_diffexp_chre.Rmd)
+
 ## Visualization code
 
 - [Chromatin associated RNA diversity](Rmd/visu_carnas_basicstats.md)
