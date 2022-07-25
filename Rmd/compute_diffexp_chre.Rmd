@@ -1,0 +1,530 @@
+---
+title: "Computation of differential expression and chromatin association scores "
+output:
+  rmarkdown::github_document
+---
+
+
+```{r, include=FALSE, cache=FALSE}
+library(tidyr)
+library(dplyr)
+library(arrow)
+library(readxl)
+library(readr)
+library(here)
+library(DESeq2)
+```
+
+
+# Computations
+
+
+## Load raw counts data
+
+```{r}
+counts_table <- read_parquet(here('data-raw','rawcounts.Q255Q40.parquet')) %>%
+  mutate(across(-c(GeneID, annotation_type), function(x) {as.integer(replace_na(x, 0))})) 
+
+smpls <- 
+  as_tibble(data.frame(sample=colnames(counts_table %>% head(n=1) %>% dplyr::select(-GeneID,-annotation_type)))) %>%
+  separate(sample, c("cell", "sequencing", "replicate"), sep="_", remove = F) %>%
+  mutate(sequencing = if_else(sequencing=='rnaseq', 'rna', sequencing)) %>%
+  mutate(sequencing=factor(sequencing, levels=c("rna","char")), cell=factor(cell, levels=c("ES","DE")))
+```
+
+Load genes info data 
+```{r}
+allgenes <- read_parquet(here('../rdana/genes/data-output/allgenes_final.parquet'))
+```
+
+
+## Analysis functions
+```{r, eval=FALSE}
+# countData header should contain the $sample values of coldata
+
+get_dds <- function(counts_tbl, s, threshold=50, scaleFactors=NULL){
+
+cts <- counts_tbl %>%
+  dplyr::select(GeneID, s$sample) %>%
+    tibble::column_to_rownames(.,var='GeneID') %>%
+    as.matrix()
+cts <- cts[,s$sample]
+dds <- DESeqDataSetFromMatrix(countData = cts, colData = s, design = ~ 1)
+keep <- rowSums(counts(dds)) >= threshold
+dds <- dds[keep,]
+
+ if (is.null(scaleFactors)){
+    print('Estimating size factors from scratch')
+    dds <- estimateSizeFactors(dds)
+  }
+  else{
+    print(colnames(dds))
+    sizeFactors(dds) <- scaleFactors[colnames(dds)]
+  }
+
+return(dds)
+}
+
+
+get_sz_factors <- function(counts_tbl, s, threshold=50){
+  cts <- counts_tbl %>%
+  dplyr::select(GeneID, s$sample) %>%
+    tibble::column_to_rownames(.,var='GeneID') %>%
+    as.matrix()
+cts <- cts[,s$sample]
+dds <- DESeqDataSetFromMatrix(countData = cts, colData = s, design = ~ 1)
+keep <- rowSums(counts(dds)) >= threshold
+dds <- dds[keep,]
+  dds <- estimateSizeFactors(dds)
+  return(sizeFactors(dds))
+
+}
+
+```
+
+This function allows us to make a DEseq object with the appropriate design to look at either chromatin enrichment in the two cell states, or compare the differentiation effect in ChAR-seq vs RNA-seq. Also compute the raw and shrunken results for chromatin enrichment in ES, DE, as well
+
+
+```{r, eval=FALSE}
+# countData header should contain the $sample values of coldata
+
+get_fpm_avg <- function(this_dds, s)
+as_tibble(fpm(this_dds, robust = T), rownames="GeneID") %>%
+  pivot_longer(-GeneID, names_to="sample", values_to="FPM") %>% 
+  left_join(s, by='sample') %>%
+  dplyr::select(-sample) %>%
+  group_by(GeneID, cell, sequencing) %>%
+  summarize(FPM=mean(FPM, na.rm=T)) %>%
+  pivot_wider(names_from=c(cell, sequencing), values_from=FPM, names_glue="FPM.{cell}.{sequencing}")
+
+
+runDEseq_chromenrich <- function(counts_tbl, s, scaleFactors=NULL, threshold=50){
+  cts <- counts_tbl %>%
+  dplyr::select(GeneID, s$sample) %>%
+    tibble::column_to_rownames(.,var='GeneID') %>%
+    as.matrix()
+  cts <- cts[,s$sample]
+  dds <- DESeqDataSetFromMatrix(countData = cts, colData = s, design = ~ cell + sequencing + cell:sequencing)
+  keep <- rowSums(counts(dds)) >= threshold
+  dds <- dds[keep,]
+
+  if (is.null(scaleFactors)){
+    print('Estimating size factors from scratch')
+    dds <- estimateSizeFactors(dds)
+  }
+  else{
+    print(colnames(dds))
+    sizeFactors(dds) <- scaleFactors[colnames(dds)]
+  }
+
+
+  dds$sequencing <- relevel(dds$sequencing, 'rna')
+  dds$cell <- relevel(dds$cell, 'ES')
+  dds<- DESeq(dds, betaPrior = FALSE)
+  
+  res_unschrunkenES <- results(dds, name="sequencing_char_vs_rna", alpha=0.05)
+  resES <- lfcShrink(dds, coef="sequencing_char_vs_rna", type='apeglm', lfcThreshold = 0)
+  resES_tibble <- as_tibble(resES,rownames='GeneID') %>% 
+    left_join(as_tibble(res_unschrunkenES, rownames='GeneID') %>% dplyr::transmute(GeneID=GeneID, log2FoldChange.raw=log2FoldChange), by='GeneID')
+  
+  res_unschrunkenInt <- results(dds, name="cellDE.sequencingchar", alpha=0.05)
+  resInt <- lfcShrink(dds, coef="cellDE.sequencingchar", type='apeglm', lfcThreshold = 0)
+  resInt_tibble <- as_tibble(resInt,rownames='GeneID') %>% 
+    left_join(as_tibble(res_unschrunkenInt, rownames='GeneID') %>% dplyr::transmute(GeneID=GeneID, log2FoldChange.raw=log2FoldChange), by='GeneID')
+
+  dds$cell <- relevel(dds$cell, 'DE')
+  dds <- nbinomWaldTest(dds)
+  
+  res_unschrunkenDE <- results(dds, name="sequencing_char_vs_rna", alpha=0.05)
+  resDE <- lfcShrink(dds, coef="sequencing_char_vs_rna", type='apeglm', lfcThreshold = 0)
+  resDE_tibble <- as_tibble(resDE,rownames='GeneID') %>% 
+    left_join(as_tibble(res_unschrunkenDE, rownames='GeneID') %>% dplyr::transmute(GeneID=GeneID, log2FoldChange.raw=log2FoldChange), by='GeneID')
+  
+  res <- resES_tibble %>% 
+    full_join(resDE_tibble %>% dplyr::select(-baseMean), by='GeneID', suffix=c('.ES','.DE')) %>%
+    full_join(resInt_tibble %>% dplyr::select(-baseMean), by='GeneID', suffix=c('','.interaction'))
+  
+  #dds$cell <- relevel(dds$cell, 'ES')
+
+  out <- list(dds=dds, res=res)
+  return(out)
+}
+
+runDEseq_cellenrich <- function(counts_tbl, s, scaleFactors=NULL, threshold=50){
+  cts <- counts_tbl %>%
+  dplyr::select(GeneID, s$sample) %>%
+    tibble::column_to_rownames(.,var='GeneID') %>%
+    as.matrix()
+  cts <- cts[,s$sample]
+  dds <- DESeqDataSetFromMatrix(countData = cts, colData = s, design = ~ sequencing + cell + sequencing:cell)
+  keep <- rowSums(counts(dds)) >= threshold
+  dds <- dds[keep,]
+
+  if (is.null(scaleFactors)){
+    print('Estimating size factors from scratch')
+    dds <- estimateSizeFactors(dds)
+  }
+  else{
+    print(colnames(dds))
+    sizeFactors(dds) <- scaleFactors[colnames(dds)]
+  }
+
+  dds$cell <- relevel(dds$cell, 'ES')
+  dds$sequencing <- relevel(dds$sequencing, 'rna')
+  dds<- DESeq(dds, betaPrior = FALSE)
+  
+  res_unschrunkenES <- results(dds, name="cell_DE_vs_ES", alpha=0.05)
+  resES <- lfcShrink(dds, coef="cell_DE_vs_ES", type='apeglm', lfcThreshold = 0)
+  resES_tibble <- as_tibble(resES,rownames='GeneID') %>% 
+    left_join(as_tibble(res_unschrunkenES, rownames='GeneID') %>% dplyr::transmute(GeneID=GeneID, log2FoldChange.raw=log2FoldChange), by='GeneID')
+  
+  res_unschrunkenInt <- results(dds, name="sequencingchar.cellDE", alpha=0.05)
+  resInt <- lfcShrink(dds, coef="sequencingchar.cellDE", type='apeglm', lfcThreshold = 0)
+  resInt_tibble <- as_tibble(resInt,rownames='GeneID') %>% 
+    left_join(as_tibble(res_unschrunkenInt, rownames='GeneID') %>% dplyr::transmute(GeneID=GeneID, log2FoldChange.raw=log2FoldChange), by='GeneID')
+
+  dds$sequencing <- relevel(dds$sequencing, 'char')
+  dds <- nbinomWaldTest(dds)
+  
+  res_unschrunkenDE <- results(dds, name="cell_DE_vs_ES", alpha=0.05)
+  resDE <- lfcShrink(dds, coef="cell_DE_vs_ES", type='apeglm', lfcThreshold = 0)
+  resDE_tibble <- as_tibble(resDE,rownames='GeneID') %>% 
+    left_join(as_tibble(res_unschrunkenDE, rownames='GeneID') %>% dplyr::transmute(GeneID=GeneID, log2FoldChange.raw=log2FoldChange), by='GeneID')
+  
+  res <- resES_tibble %>% 
+    full_join(resDE_tibble %>% dplyr::select(-baseMean), by='GeneID', suffix=c('.rna','.char')) %>%
+    full_join(resInt_tibble %>% dplyr::select(-baseMean), by='GeneID', suffix=c('','.interaction'))
+  
+  #dds$cell <- relevel(dds$cell, 'ES')
+
+  out <- list(dds=dds, res=res)
+  return(out)
+}
+
+```
+
+## Heavy lift: run DE seq
+
+### Size factors
+First compute size factors using only exons or exons+introns, across all samples
+```{r, eval=FALSE}
+samples.rnachar<-smpls
+
+szFactors.rnachar.exons <- get_sz_factors(counts_table %>% dplyr::filter(annotation_type=='exons'), samples.rnachar, threshold=50)
+szFactors.rnachar.exonsintrons <- get_sz_factors(counts_table %>% dplyr::filter(annotation_type %in% c('exons', 'introns')) %>% dplyr::select(-annotation_type) %>% group_by(GeneID) %>% summarize_all(sum), samples.rnachar, threshold=50)
+
+szFactors.rnachar.everything <- get_sz_factors(counts_table  %>% dplyr::filter(annotation_type!='all') %>% dplyr::select(-annotation_type) %>% group_by(GeneID) %>% summarize_all(sum), samples.rnachar, threshold=50)
+```
+
+
+### Chromatin enrichement 
+
+We will only do exons scaling in this notebook.
+Exons alone
+```{r}
+chre.exonsScaling.exons <- runDEseq_chromenrich(counts_table %>% dplyr::filter(annotation_type=='exons') %>% dplyr::select(-annotation_type), samples.rnachar, scaleFactors=szFactors.rnachar.exons, threshold=10)
+
+fpm.exonsScaling.exons<-get_fpm_avg(chre.exonsScaling.exons$dds, samples.rnachar)
+
+```
+
+All rna types together
+```{r}
+chre.exonsScaling.everything <- runDEseq_chromenrich(counts_table %>% dplyr::filter(annotation_type!='all') %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% dplyr::rename(GeneID=GeneID_type), samples.rnachar, scaleFactors=szFactors.rnachar.exons, threshold=10)
+
+chre.exonsScaling.everything$res <- chre.exonsScaling.everything$res %>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+fpm.exonsScaling.everything<-get_fpm_avg(chre.exonsScaling.everything$dds, samples.rnachar) %>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+```
+
+### Cell enrichement
+
+```{r}
+celle.exonsScaling.everything <- runDEseq_cellenrich(counts_table %>% dplyr::filter(annotation_type!='all') %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% dplyr::rename(GeneID=GeneID_type), samples.rnachar, scaleFactors=szFactors.rnachar.exons, threshold=50)
+
+celle.exonsScaling.everything$res <- celle.exonsScaling.everything$res %>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+```
+
+
+## Heavy lift 2: RNA and ChAR separately
+
+Redo DEseq on Char and RNA seq separately using the augmented transcriptome.
+
+### Size factions
+Get size factors using only the exons/introns
+```{r}
+samples.char <- smpls %>% dplyr::filter(sequencing=="char") 
+
+samples.rna <- smpls %>% dplyr::filter( sequencing=="rna") 
+
+
+szFactors.rna.exons <- get_sz_factors(counts_table %>% dplyr::filter(annotation_type=='exons'), samples.rna, threshold=10)
+szFactors.rna.exonsintrons <- get_sz_factors(counts_table %>% dplyr::filter(annotation_type %in% c('exons', 'introns')) %>% dplyr::select(-annotation_type) %>% group_by(GeneID) %>% summarize_all(sum), samples.rna, threshold=10)
+
+szFactors.char.exons <- get_sz_factors(counts_table %>% dplyr::filter(annotation_type=='exons'), samples.char, threshold=10)
+szFactors.char.exonsintrons <- get_sz_factors(counts_table %>% dplyr::filter(annotation_type %in% c('exons', 'introns')) %>% dplyr::select(-annotation_type) %>% group_by(GeneID) %>% summarize_all(sum), samples.char, threshold=10)
+
+```
+
+
+### Classical DEseq ChAR
+```{r}
+runDEseq<- function(counts_tbl, s, scaleFactors=NULL, threshold=50){
+  cts <- counts_tbl %>%
+  dplyr::select(GeneID, s$sample) %>%
+    tibble::column_to_rownames(.,var='GeneID') %>%
+    as.matrix()
+  cts <- cts[,s$sample]
+  dds <- DESeqDataSetFromMatrix(countData = cts, colData = s, design = ~ cell)
+  keep <- rowSums(counts(dds)) >= threshold
+  dds <- dds[keep,]
+
+  if (is.null(scaleFactors)){
+    print('Estimating size factors from scratch')
+    dds <- estimateSizeFactors(dds)
+  }
+  else{
+    print(colnames(dds))
+    sizeFactors(dds) <- scaleFactors[colnames(dds)]
+  }
+
+  dds$cell <- relevel(dds$cell, 'ES')
+  dds<- DESeq(dds, betaPrior = FALSE)
+  
+  res_unschrunkenES <- results(dds, name="cell_DE_vs_ES", alpha=0.05)
+  resES <- lfcShrink(dds, coef="cell_DE_vs_ES", type='apeglm', lfcThreshold = 0)
+  resES_tibble <- as_tibble(resES,rownames='GeneID') %>% 
+    left_join(as_tibble(res_unschrunkenES, rownames='GeneID') %>% dplyr::transmute(GeneID=GeneID, log2FoldChange.raw=log2FoldChange), by='GeneID')
+
+  out <- list(dds=dds, res=resES_tibble, sf=sizeFactors(dds))
+  return(out)
+}
+```
+
+
+```{r}
+charSeq.exonsScaling.everything=runDEseq(counts_table %>% dplyr::filter(annotation_type!='all') %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% dplyr::rename(GeneID=GeneID_type), samples.char, scaleFactors=szFactors.char.exons, threshold=10)
+
+#%>% %>% dplyr::filter(GeneID %in% (chre.exonsScaling.everything$res %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% pull("GeneID_type")))  --> thr=-1
+
+charSeq.exonsScaling.everything$res <- charSeq.exonsScaling.everything$res %>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+```
+
+```{r}
+charSeq.exonsScaling.all=runDEseq(counts_table %>% dplyr::filter(annotation_type=='all') %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% dplyr::rename(GeneID=GeneID_type), samples.char, scaleFactors=szFactors.char.exons, threshold=10)
+
+
+charSeq.exonsScaling.all$res <- charSeq.exonsScaling.all$res %>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+charSeq.fpm.exonsScaling.all<-get_fpm_avg(charSeq.exonsScaling.all$dds, samples.char)%>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+```
+
+
+
+```{r}
+
+charSeq.fpm.exonsScaling.everything<-get_fpm_avg(charSeq.exonsScaling.everything$dds, samples.char)%>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+# charSeq.dds.exonsScaling.everything <- get_dds(counts_table %>% dplyr::filter(annotation_type!='all') %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% dplyr::rename(GeneID=GeneID_type) , samples.char, threshold=10, scaleFactors=szFactors.char.exons)
+# 
+# charSeq.fpm.exonsScaling.everything<-get_fpm_avg(charSeq.dds.exonsScaling.everything, samples.char)%>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+```
+
+NO STRNGTIE
+```{r}
+charSeq.exonsScaling.ei=runDEseq(counts_table %>% dplyr::filter(annotation_type %in% c('exons','introns')) %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% dplyr::rename(GeneID=GeneID_type), samples.char, scaleFactors=szFactors.char.exons, threshold=10)
+
+#%>% %>% dplyr::filter(GeneID %in% (chre.exonsScaling.everything$res %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% pull("GeneID_type")))  --> thr=-1
+
+charSeq.exonsScaling.ei$res <- charSeq.exonsScaling.ei$res %>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+charSeq.fpm.exonsScaling.ei<-get_fpm_avg(charSeq.exonsScaling.ei$dds, samples.char)%>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+```
+
+### Classical DEseq RNA
+```{r}
+rnaSeq.exonsScaling.everything=runDEseq(counts_table %>% dplyr::filter(annotation_type!='all') %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% dplyr::rename(GeneID=GeneID_type) , samples.rna, scaleFactors=szFactors.rna.exons, threshold=10)
+
+#%>% dplyr::filter(GeneID %in% (chre.exonsScaling.everything$res %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% pull("GeneID_type"))) 
+
+rnaSeq.exonsScaling.everything$res <- rnaSeq.exonsScaling.everything$res %>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+
+rnaSeq.fpm.exonsScaling.everything<-get_fpm_avg(rnaSeq.exonsScaling.everything$dds, samples.rna)%>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+# rnaSeq.dds.exonsScaling.everything <- get_dds(counts_table %>% dplyr::filter(annotation_type!='all') %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% dplyr::rename(GeneID=GeneID_type) , samples.rna, threshold=-1, scaleFactors=szFactors.rna.exons)
+# 
+# rnaSeq.fpm.exonsScaling.everything<-get_fpm_avg(rnaSeq.dds.exonsScaling.everything, samples.rna)%>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+```
+
+
+EI COMBINED
+
+```{r}
+rnaSeq.exonsScaling.all=runDEseq(counts_table %>% dplyr::filter(annotation_type=='all') %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% dplyr::rename(GeneID=GeneID_type) , samples.rna, scaleFactors=szFactors.rna.exons, threshold=10)
+
+#%>% dplyr::filter(GeneID %in% (chre.exonsScaling.everything$res %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% pull("GeneID_type"))) 
+
+rnaSeq.exonsScaling.all$res <- rnaSeq.exonsScaling.all$res %>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+
+rnaSeq.fpm.exonsScaling.all<-get_fpm_avg(rnaSeq.exonsScaling.all$dds, samples.rna)%>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+
+```
+
+
+NO STRINGTIE
+```{r}
+rnaSeq.exonsScaling.ei=runDEseq(counts_table %>% dplyr::filter(annotation_type %in% c("exons","introns")) %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% dplyr::rename(GeneID=GeneID_type) , samples.rna, scaleFactors=szFactors.rna.exons, threshold=10)
+
+#%>% dplyr::filter(GeneID %in% (chre.exonsScaling.everything$res %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% pull("GeneID_type"))) 
+
+rnaSeq.exonsScaling.ei$res <- rnaSeq.exonsScaling.ei$res %>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+
+rnaSeq.fpm.exonsScaling.ei<-get_fpm_avg(rnaSeq.exonsScaling.ei$dds, samples.rna)%>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+# rnaSeq.dds.exonsScaling.everything <- get_dds(counts_table %>% dplyr::filter(annotation_type!='all') %>% tidyr::unite("GeneID_type", c(GeneID, annotation_type), remove=T) %>% dplyr::rename(GeneID=GeneID_type) , samples.rna, threshold=-1, scaleFactors=szFactors.rna.exons)
+# 
+# rnaSeq.fpm.exonsScaling.everything<-get_fpm_avg(rnaSeq.dds.exonsScaling.everything, samples.rna)%>% dplyr::rename(GeneID_type=GeneID) %>% separate(GeneID_type, c("GeneID","annotation_type"), sep="_")
+
+```
+
+### Summarize DEseq RNA+ChAR
+
+```{r}
+
+rnaCharSummary <- function(rnaout, charout, rnafpm, charfpm, annots){
+  out<- rnaout %>% 
+    dplyr::rename(log2FoldChange_raw=log2FoldChange.raw) %>%
+    full_join(charout %>% dplyr::rename(log2FoldChange_raw=log2FoldChange.raw), by=c('GeneID','annotation_type'), suffix=c('.rna','.char')) %>%
+    full_join(rnafpm, by=c('GeneID','annotation_type')) %>%
+    full_join(charfpm, by=c('GeneID','annotation_type')) %>%
+    left_join(annots, by='GeneID') %>%
+    mutate(rnalen=case_when(annotation_type=='exons'~elen, annotation_type=='introns'~(ilen), T~elen)) %>%
+    mutate(across(starts_with("FPM"), ~(.x/rnalen*1000), .names = "{col}_FPKM")) %>%
+  rename_with(., ~paste0("FPKM",substr(.x,4, nchar(.x)-5)), ends_with("_FPKM")) %>%
+    arrange(desc(baseMean.char)) %>%
+    dplyr::relocate(GeneID, annotation_type, name, rna_type, rna_subtype, ambiguous) %>%
+    dplyr::select(-elen, -ilen, -rnalen)
+    
+return(out)
+}
+
+```
+
+
+```{r}
+allgenes_simple <- allgenes %>%
+                         dplyr::filter(annotation_type %in% c("exons","intergenic")) %>%
+                         dplyr::select(GeneID, name, rna_type, rna_subtype, elen, ilen, ambiguous)
+
+edata<- rnaCharSummary(rnaSeq.exonsScaling.everything$res, charSeq.exonsScaling.everything$res, rnaSeq.fpm.exonsScaling.everything, charSeq.fpm.exonsScaling.everything, allgenes_simple) %>% 
+  dplyr::select(-starts_with("log2FoldChange_raw"))
+
+
+```
+
+```{r}
+edata_eicombined<- rnaCharSummary(rnaSeq.exonsScaling.all$res, charSeq.exonsScaling.all$res, rnaSeq.fpm.exonsScaling.all, charSeq.fpm.exonsScaling.all, allgenes_simple) %>% dplyr::select(-starts_with("log2FoldChange_raw")) 
+```
+
+
+NO STRNGTIE
+```{r}
+edata_ei<- rnaCharSummary(rnaSeq.exonsScaling.ei$res, charSeq.exonsScaling.ei$res, rnaSeq.fpm.exonsScaling.ei, charSeq.fpm.exonsScaling.ei, allgenes_simple) %>% dplyr::select(-starts_with("log2FoldChange_raw")) 
+```
+
+
+```{r}
+# edata %>%  write_parquet(here("data-output/expression", "expression.rnacharIndep.exonsScaling.everything.Q255Q40.parquet"))
+# edata_ei %>%  write_parquet(here("data-output/expression", "expression.rnacharIndep.exonsScaling.ei.Q255Q40.parquet"))
+#edata_eicombined %>%  write_parquet(here("data-output/expression", "expression.rnacharIndep.exonsScaling.eicombined.Q255Q40.parquet"))
+
+```
+
+
+
+
+## Summarize heavy lift 1+2
+```{r}
+get_summary_expression <-function(chre_data, fpm_data, deseq_data){
+ 
+ chre_expr_summary <- chre_data %>%
+   dplyr::select(GeneID, annotation_type, starts_with('log2FoldChange'), starts_with('padj')) %>%
+  dplyr::select(-starts_with('log2FoldChange.raw'),-starts_with('log2FoldChange_raw')) %>%
+  left_join(fpm_data %>%  dplyr::select(GeneID, annotation_type, starts_with('FPM')), by=c('GeneID','annotation_type')) %>%
+left_join(deseq_data %>%
+            dplyr::select(GeneID, annotation_type, starts_with('log2FoldChange'), starts_with('padj')) %>%
+  dplyr::select(-starts_with('log2FoldChange_raw')), by=c('GeneID','annotation_type')) 
+ 
+ return(chre_expr_summary)
+ 
+}
+```
+
+
+
+This uses: everything from combined RNA/char analysis except:
+log2FoldChange.char/rna, padj.char/rna, ON.ES/DE.char/rna --> from separate
+ON/OFF.ES/DE
+```{r}
+edata2 <- get_summary_expression(chre.exonsScaling.everything$res, fpm.exonsScaling.everything, edata)
+```
+
+
+
+# Create supp tables
+```{r}
+library(openxlsx)
+```
+
+
+```{r}
+data_to_save <- list(with_unannotated = edata, gencode_only = edata_ei, gencode_EIcombined = edata_eicombined)
+
+data_to_save <- 
+  purrr::map(data_to_save, function(x) {x %>% arrange(desc(baseMean.char))})
+
+wb <- createWorkbook()
+addWorksheet(wb,"with_unannotated")
+addWorksheet(wb,"gencode_only")
+addWorksheet(wb,"gencode_EIcombined")
+# 
+
+purrr::imap(data_to_save, function(x,y) writeData(wb, y, x)) 
+saveWorkbook(wb, here('data-output/expression','expression.rnacharIndep.exonsScaling.Q255Q40.xlsx'), overwrite = TRUE)
+
+
+purrr::imap(data_to_save, function(x,y) write_parquet(x,  here('data-output/expression',paste0('expression.rnacharIndep.exonsScaling.Q255Q40.',y,'.parquet')))) 
+```
+
+```{r}
+data_to_save2 <- list(with_unannotated = edata2)
+genes_types2 <- allgenes %>% dplyr::select(GeneID, name, annotation_type, rna_type, rna_subtype, ambiguous)
+data_to_save2 <- 
+  purrr::map(data_to_save2, function(x) {x %>% arrange(desc(FPM.ES.char + FPM.DE.char)) %>%
+    #dplyr::select(-c(name)) %>%
+    dplyr::rename(GeneID=GeneID, annotation_type=annotation_type,  Chromatin_association_score.ES=log2FoldChange.ES, Chromatin_association_score_padj.ES=padj.ES, Chromatin_association_score.DE= log2FoldChange.DE, Chromatin_association_score_padj.DE=padj.DE, Chromatin_association_score_DEvsES_LFC=log2FoldChange,  Chromatin_association_score_DEvsES_padj = padj,
+                  log2FoldChange_DEvsES.rna= log2FoldChange.rna, log2FoldChange_DEvsES.char= log2FoldChange.char, padj_DEvsES.rna = padj.rna, padj_DEvsES.char = padj.char)%>%
+    left_join(genes_types2, by=c('GeneID', 'annotation_type')) %>%
+    dplyr::relocate(colnames(genes_types2)) %>%
+  dplyr::relocate(annotation_type, .after=GeneID)})
+```
+
+```{r}
+data_to_save2$with_unannotated  %>% write_parquet(here('data-output/expression',paste0('chromation_association_scores.exonsScaling.Q255Q40.parquet')))
+
+data_to_save2$with_unannotated  %>% openxlsx::write.xlsx(here('data-output/expression',paste0('chromation_association_scores.exonsScaling.Q255Q40.xlsx')))
+```
+
+
+
+
+
