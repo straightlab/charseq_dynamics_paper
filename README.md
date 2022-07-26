@@ -2,7 +2,8 @@
 
 ## Core computations
 
-- [Differential expression and chromatin assocation](Rmd/compute_diffexp_chre.Rmd)
+- [Differential expression and chromatin association](Rmd/compute_diffexp_chre.Rmd)
+- [Delocalization scores with GLM](Rmd/compute_delocalization.Rmd). Goes with [Associated visualization of the GLM fit](Rmd/visu_delocalization_GLM.Rmd) 
 
 ## Visualization code
 

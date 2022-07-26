@@ -1,0 +1,476 @@
+---
+title: "Computation of delocalization scores "
+output:
+  rmarkdown::github_document
+---
+
+
+```{r, include=FALSE, cache=FALSE}
+library(tidyr)
+library(dplyr)
+library(purrr)
+library(broom)
+library(ggplot2)
+#library(DESeq2)
+library(gamlss)
+library(ggrepel)
+library(readr)
+library(arrow)
+library(here)
+library(openxlsx)
+library(paperutils)
+library(lemon)
+library(cowplot)
+```
+
+
+# Trans delocalization scores
+
+
+## Load count data and gene info
+
+Load cis trans count data
+```{r}
+ctdata<-read_parquet(here('../rdana/carnas/data-raw/countsXsample.cistrans.Q255Q40bt2Q40.parquet')) %>% 
+  dplyr::rename(sample=cell) %>%
+  mutate(Nct=Ncis+Ntrans) %>%
+  dplyr::rename(GeneID=ENSG, annotation_type=rnatype) 
+head(ctdata) 
+```
+Load genes info
+
+```{r}
+allgenes <- read_parquet(here('../rdana/genes/data-output/allgenes_final.parquet'))
+chr_length <- read_parquet(here('../rdana/genes/data-output/chrlength.parquet'))
+```
+
+## Train GLM model
+
+Define genes for model training as mRNAs not overlapping snRNA, tRNA, etc... (ambiguous = 0)
+```{r}
+bkg_genes <- 
+  allgenes %>% 
+  dplyr::filter(rna_type %in% c('mRNA'), ambiguous==0) %>%
+  left_join(chr_length %>% dplyr::select(chr, transnorm, L), by='chr')
+```
+
+
+Compute raw delocalization score
+```{r}
+modelCisTrans <- function(cdata, gdf){
+fite <- cdata %>% 
+  inner_join(gdf %>% dplyr::select(GeneID, chr, transnorm), by='GeneID') %>%
+  mutate(tscore=Ntrans/Ncis*transnorm) %>%
+
+  mutate(quantile=ntile(tscore,10)) %>%
+  #dplyr::filter(quantile>1, quantile<10) %>%
+  dplyr::select(-transnorm) %>%
+  
+  nest(data = c(GeneID, Ncis, Ntrans, N, Nct, quantile, tscore, chr)) %>%
+  mutate(
+    fit = purrr::map(data, ~lm(log(Ntrans/Nct) ~ log(Nct)+chr, data = .x)),
+    pred=purrr::map2(fit, data, function(h1,h2) {as_tibble(predict(h1, interval = "confidence")) %>% bind_cols(h2)}),
+    tidied=purrr::map(fit, function (h) {tidy(h) })) %>% 
+  ungroup()
+return(fite)
+}
+
+```
+
+
+Train 
+```{r}
+#gdf contains all that goes into background fitting
+fitBkg <- function(cdata, gdf){
+ bkg <- cdata %>% 
+  inner_join(gdf %>% dplyr::select(GeneID, chr, transnorm), by='GeneID') %>% 
+   mutate(tscore=Ntrans/Ncis*transnorm) %>%
+   dplyr::select(-transnorm) %>%
+   mutate(chr=factor(as.character(chr))) %>%
+  nest(data = c(GeneID, Ncis, Ntrans, Nct, chr, tscore)) %>%
+   
+  mutate(
+    fit = map(data, function(h) {gamlss(as.matrix(cbind(Ntrans, Ncis)) ~ log(Nct) + chr,
+               data = h,
+               family=BB)})
+    )
+ return(bkg)
+}
+
+```
+
+
+```{r}
+bkgmodel.exons  <- fitBkg(ctdata %>% dplyr::filter(annotation_type=='exons', Ncis>5, Nct>50) %>% dplyr::select(-annotation_type), bkg_genes %>% dplyr::filter(annotation_type=='exons'))
+bkgmodel.introns  <- fitBkg(ctdata %>% dplyr::filter(annotation_type=='introns', Ncis>5, Nct>50) %>% dplyr::select(-annotation_type), bkg_genes  %>% dplyr::filter(annotation_type=='introns'))
+```
+
+
+
+## Apply GLM to get regularized scores and p-values
+
+
+This function applies the GLM and computes p values based on Bayesian A/B testing (pA>pB)
+```{r}
+ab_test <- function(alpha1, beta1, alpha2, beta2) {
+  i <- seq.int(0, round(alpha2) - 1)
+  y <- (lbeta(i + alpha1, beta1 + beta2) - log(i+beta2) - lbeta(1+i, beta2) - lbeta(alpha1, beta1))
+  out <- 1-(sum(exp(y)))
+  return(out)
+}
+ab_testV <- Vectorize(ab_test)
+
+
+fitData <- function(cdata, gdf, bkg){
+  x<-cdata %>% 
+  inner_join(gdf %>% dplyr::select(GeneID, chr, transnorm), by=c('GeneID')) %>%
+   mutate(tscore=Ntrans/Ncis*transnorm) %>%
+   mutate(chr=factor(as.character(chr))) %>%
+    
+  nest(alldata = c(GeneID, Ncis, Ntrans, Nct, chr, tscore), tn=c(transnorm))
+         
+
+prds<-bkg %>%
+  left_join(x, by='sample') %>%
+  mutate(pred=purrr::pmap(list(fit, data, alldata), function(h1,h2,h3){as_tibble(list(r.prior=predict(h1, data=h2, newdata=h3, type="response")))})) %>%
+  mutate(sigma=purrr::map_dbl(fit, function(h){unname(exp(h$sigma.coefficients))})) %>%
+  dplyr::select(sample, alldata, pred, sigma, tn) %>%
+  unnest(c(alldata, pred, tn)) %>%
+  mutate(r.obs=Ntrans/Nct) %>%
+  mutate(alpha_prior=r.prior / sigma,
+    beta_prior=(1-r.prior)/sigma,
+    alpha_post=alpha_prior + Ntrans,
+    beta_post=beta_prior + Ncis,
+    r.est=alpha_post/(alpha_post+beta_post),
+    p.high=abs(ab_testV(alpha_prior, beta_prior, alpha_post, beta_post)),
+    p.low=abs(1-p.high),
+    p.high.corr=p.adjust(p.high, method = "BH"),
+    p.low.corr=p.adjust(p.low, method = "BH"),
+    tscore.est=r.est/(1-r.est)*transnorm,
+    tscore.LFE=log((r.est/r.prior)/((1-r.est)/(1-r.prior)), base=2)) %>%
+    arrange(desc(abs(tscore.LFE))) %>%
+    dplyr::select((!starts_with('alpha') & !starts_with('beta')), -c(transnorm, sigma, chr)) %>%
+  dplyr::relocate(GeneID, sample, tscore.LFE, p.high.corr, p.low.corr, Ncis, Ntrans, Nct, tscore, tscore.est, r.prior, r.obs, r.est, p.high, p.low)
+  return(prds)
+
+}
+```
+
+
+Run the GLM prediction used the model trained on exons or introns, separately
+```{r}
+genes_with_transnorm <- allgenes %>% 
+  dplyr::select(GeneID, annotation_type, chr) %>%
+  dplyr::filter(annotation_type %in% c('exons','intergenic')) %>%
+  dplyr::select(-annotation_type) %>%
+  left_join(chr_length %>% dplyr::select(chr, transnorm), by='chr')
+
+preds.exonsModel <- ctdata  %>% dplyr::filter(annotation_type!='all', Ncis>0, Nct>50) %>% 
+  nest_by(annotation_type) %>%
+  mutate(fts=list(fitData(data, genes_with_transnorm, bkgmodel.exons))) %>%
+  dplyr::select(annotation_type, fts) %>% unnest(fts) 
+  
+preds.intronsModel <- ctdata  %>% dplyr::filter(annotation_type!='all', Ncis>0, Nct>50) %>% 
+  nest_by(annotation_type) %>%
+  mutate(fts=list(fitData(data, genes_with_transnorm, bkgmodel.introns))) %>%
+  dplyr::select(annotation_type, fts) %>% unnest(fts)
+  
+```
+
+
+
+Save GLM prediction output as is (we will fix column names later)
+
+```{r}
+# older version were column names were not fixed
+preds.exonsModel %>% write_parquet(here('data-output/delocalization/tmp','tscores.bysample.exonsModel.everything.Q255Q40bt2Q40.parquet'))
+preds.intronsModel %>% write_parquet(here('data-output/delocalization/tmp', 'tscores.bysample.intronsModel.everything.Q255Q40bt2Q40.parquet'))
+```
+
+## Save scores
+
+Clean up column names and save scores as final material
+```{r}
+data_to_save <- list(exonsModel=preds.exonsModel,intronsModel=preds.intronsModel)
+
+data_to_save <- 
+  purrr::imap(data_to_save, function(x,y) {x  %>%
+  ungroup() %>%
+  dplyr::rename(Nnear = Ncis, Nfar= Ntrans, delocalization_score.raw = tscore, delocalization_score.calibrated = tscore.LFE, GeneID=GeneID, annotation_type = annotation_type) %>%
+  dplyr::select(-c(Nct, tscore.est)) %>%
+  left_join(allgenes %>% dplyr::select(GeneID, annotation_type, name, rna_type, rna_subtype, ambiguous), by = c("GeneID","annotation_type")) %>%
+  relocate(sample, GeneID, name, rna_type, rna_subtype, annotation_type, Nnear, Nfar, delocalization_score.raw, delocalization_score.calibrated, p.high, p.high.corr, p.low, p.low.corr, r.obs, r.est, r.prior, ambiguous)})
+
+  
+wb <- createWorkbook()
+addWorksheet(wb,"exonsModel")
+addWorksheet(wb,"intronsModel")
+# 
+
+purrr::imap(data_to_save, function(x,y) writeData(wb, y, x )) 
+saveWorkbook(wb, here('data-output/delocalization','delocalization_scores.bysample.trans.xlsx'), overwrite = TRUE)
+
+purrr::imap(data_to_save, function(x,y) write_parquet(x,  here('data-output/delocalization',paste0('delocalization_scores.bysample.trans.',y,'.parquet'))))
+```
+
+
+
+# Cis delocalization scores
+
+## Load count data
+
+Load raw count data with number of reads within defined travel distance windows (1e3, 1e4, 1e5, 1e6, 1e7 bp)
+```{r}
+smpls2load <- list(ES_1="ES", DE_1="DE",ES_2="ES2",DE_2='DE2')
+annotation_type2load <- list(exons='exons',introns='introns',intergenic='strngtie')
+
+flydata <- 
+  bind_rows(lapply(annotation_type2load, function(h){
+    bind_rows(lapply(smpls2load, function(x) read_parquet(here('../rdana/cacoarse/data-raw', paste0(x,"_flywithin_",h,".Q255Q40bt2Q40.parquet"))) %>% 
+                       dplyr::rename( GeneID=ENSG) %>% relocate(GeneID)), .id="sample")
+  }), .id='annotation_type')
+                                  
+          
+```
+
+
+## Calulate raw cis delocalization scores
+
+Calculate "cis delocalization scores" = density ratio outside over inside
+```{r}
+
+compute_raw_cis_deloc <- function(cdata, gdf, chr_length){
+cis_deloc_raw <-cdata %>%
+  dplyr::rename(Ncis=N) %>%
+  pivot_longer(cols = !c(sample, annotation_type, GeneID,Ncis),
+               names_pattern = "(.*)_(.*)",
+               names_to =c(".value","D")) %>%
+  inner_join(gdf %>% 
+               dplyr::filter(annotation_type %in% c('exons','intergenic')) %>%
+               left_join(chr_length %>% dplyr::select(chr, L), by='chr') %>%
+              dplyr::select(GeneID,chr, L), by='GeneID') %>%
+  mutate(D=as.integer(D)) %>%
+  dplyr::mutate(traw=pmax((Ncis-N),1)/pmax(N,1)*(2*D-wcorr)/(L-((2*D-wcorr)))) %>%
+    dplyr::select(-L)
+return(cis_deloc_raw)
+}
+  
+```
+
+
+```{r}
+cis_deloc_raw <- compute_raw_cis_deloc(flydata, allgenes, chr_length)
+```
+
+## Train GLM model
+
+```{r}
+fitBkg <- function(gt, gdata){
+ bkg <- gt %>%
+  dplyr::select(-wcorr) %>%
+  mutate(Nout=Ncis-N) %>%
+  inner_join(bkg_genes %>% dplyr::select(annotation_type, GeneID), by=c('annotation_type','GeneID')) %>%
+  dplyr::filter(Nout>0, Ncis>50, N>5) %>%
+  group_by(sample, annotation_type, D) %>%
+  nest(data = c(GeneID, Ncis, N, Nout, traw, chr)) %>%
+  mutate(
+    fit = map(data, function(h) {gamlss(as.matrix(cbind(Nout, N)) ~ log(Ncis) + chr,
+               data = h,
+               family=BB)})) %>%
+   ungroup()
+ return(bkg)
+}
+
+```
+
+We use the same mRNA genes to train the GLM. Note that with this code, we train using the exons and the introns separately again but using a single line of code (using the nested data structured)
+
+```{r}
+bkgmodel.CIS<-fitBkg(cis_deloc_raw, bkg_genes)
+```
+
+## Apply GLM to get regularized cis deloc. scores
+
+This function applies the GLM and computes p values based on Bayesian A/B testing (pA>pB)
+```{r}
+
+fitData <- function(cdata, bkg){
+  x<-cdata %>% 
+  mutate(Nout=Ncis-N) %>%
+    dplyr::select(sample, annotation_type, D, GeneID, Ncis, N, Nout, traw, chr) %>%
+    group_by(sample,annotation_type,D) %>%
+  nest(alldata = c(GeneID, Ncis, N, Nout, traw, chr)) %>% 
+    ungroup()
+
+prds<-bkg %>% 
+  left_join(x, by=c('sample','D')) %>%
+  mutate(pred=purrr::pmap(list(fit, data, alldata), function(h1,h2,h3){as_tibble(list(r.prior=predict(h1, data=h2, newdata=h3, type="response")))})) %>%
+  mutate(sigma=purrr::map_dbl(fit, function(h){unname(exp(h$sigma.coefficients))})) %>%
+  dplyr::select(D, sample, annotation_type, alldata, pred, sigma) %>%
+  unnest(c(alldata, pred)) %>%
+  group_by(sample,annotation_type,D) %>%
+  #mutate(tscore=Nout/N*transnorm) %>%
+  mutate(r.obs=Nout/Ncis) %>%
+  mutate(alpha_prior=r.prior / sigma,
+    beta_prior=(1-r.prior)/sigma,
+    alpha_post=alpha_prior + Nout,
+    beta_post=beta_prior + N,
+    r.est=alpha_post/(alpha_post+beta_post),
+    p.high=abs(ab_testV(alpha_prior, beta_prior, alpha_post, beta_post)),
+    p.low=abs(1-p.high),
+    p.twosided=pmin(p.low, p.high),
+    p.twosided.corr=p.adjust(p.twosided, method = "BH"), 
+    p.high.corr=p.adjust(p.high, method = "BH"),  
+    p.low.corr=p.adjust(p.low, method = "BH"), 
+    #tscore.est=r.est/(1-r.est)*transnorm,
+    tscore.LFE=log((r.est/r.prior)/((1-r.est)/(1-r.prior)), base=2)) %>%
+    arrange(desc(abs(tscore.LFE))) %>%
+    dplyr::select((!starts_with('alpha') & !starts_with('beta')), -c(r.prior, sigma))  %>%
+   # inner_join(gdf %>% dplyr::select(GeneID, name, subtype), by='GeneID') %>%
+    ungroup()
+  return(prds)
+}
+```
+
+
+Run the GLM prediction used the model trained on exons or introns, separately
+```{r}
+prds.CIS.exonsModel<- fitData(cis_deloc_raw %>%
+                               dplyr::mutate(N=pmax(N,1), Ncis = pmax(Ncis,N+1)) %>%
+
+                         dplyr::filter(Ncis>0), bkgmodel.CIS %>% dplyr::filter(annotation_type=='exons') %>% dplyr::select(-annotation_type)) 
+
+```
+
+
+```{r}
+prds.CIS.intronsModel<- fitData(cis_deloc_raw %>%
+                                  dplyr::mutate(N=pmax(N,1), Ncis = pmax(Ncis,N+1)) %>%
+                                  dplyr::filter(Ncis>0), bkgmodel.CIS %>% dplyr::filter(annotation_type=='introns') %>% dplyr::select(-annotation_type)) 
+
+```
+
+
+Save the cis delocalization scores as is
+```{r}
+prds.CIS.exonsModel %>% write_parquet(here('data-output/delocalization/tmp','CIStscores.allSamples.exonsModel.everything.Q255Q40bt2Q40.parquet'))
+prds.CIS.intronsModel %>% write_parquet(here('data-output/delocalization/tmp','CIStscores.allSamples.intronsModel.everything.Q255Q40bt2Q40.parquet'))
+```
+
+## Save scores
+
+Cleanup column names and save as final material
+```{r}
+data_to_save <- list(exonsModel=prds.CIS.exonsModel,intronsModel=prds.CIS.intronsModel)
+
+data_to_save <- 
+  purrr::imap(data_to_save, function(x,y) {x %>%
+  #head() %>%
+  dplyr::rename(Nnear = N, Nfar =Nout, delocalization_score.raw = traw, delocalization_score.calibrated = tscore.LFE, GeneID=GeneID, annotation_type = annotation_type, far_threshold_bp=D) %>%
+  dplyr::select(-c(Ncis, p.twosided, p.twosided.corr)) %>%
+      left_join(allgenes %>% dplyr::select(GeneID, annotation_type, name, rna_type, rna_subtype, ambiguous), by = c("GeneID","annotation_type")) %>%
+     
+  relocate(sample, GeneID, name, rna_type, rna_subtype, annotation_type, far_threshold_bp, chr, Nnear, Nfar, delocalization_score.raw, delocalization_score.calibrated, p.high, p.high.corr, p.low, p.low.corr, r.obs, r.est, ambiguous)})
+    
+
+wb <- createWorkbook()
+addWorksheet(wb,"exonsModel")
+addWorksheet(wb,"intronsModel")
+# 
+
+purrr::imap(data_to_save, function(x,y) writeData(wb, y, x %>% dplyr::filter(far_threshold_bp==10000000))) 
+saveWorkbook(wb, here('data-output/delocalization','delocalization_scores.bysample.cis.xlsx'), overwrite = TRUE)
+
+purrr::imap(data_to_save, function(x,y) write_parquet(x,  here('data-output/delocalization',paste0('delocalization_scores.bysample.cis.',y,'.parquet'))))
+``` 
+
+# Combine replicates
+
+## Computation of scores for combined replicates
+These functions define how to combine replicates
+```{r}
+
+gm_mean = function(x, na.rm=TRUE){
+  xok=x[which((!is.na(x)) & (x>0))]
+  exp(sum(log(xok)) / length(xok))
+}
+
+
+# combines replicates, p values are combined using the Fisher method, BH procedure applied separetely for each type of deloclization (trans, cis at 10kb, 100kb etc..) and each rna type (exons, introns, intergenic), separately.
+
+combine_preds <- function(p) { 
+  out <- p %>% 
+    ungroup() %>%
+    separate(sample, c("cell","replicate"), sep="_", remove=T) %>%
+    dplyr::select(-c(replicate, p.high.corr, p.low.corr)) %>%
+    mutate(p.high = replace_na(p.high, 1), p.low = replace_na(p.low, 1)) %>%
+    mutate(p.high = if_else(p.high<1e-100, 1e-100, p.high), p.low = if_else(p.low<1e-100, 1e-100, p.low)) %>%
+  group_by(GeneID, cell, annotation_type, far_threshold_bp) %>%
+  summarize(name=name[1], rna_type=rna_type[1], rna_subtype=rna_subtype[1], ambiguous=ambiguous[1], delocalization_score.calibrated = mean(delocalization_score.calibrated, na.rm=TRUE), delocalization_score.raw=gm_mean(delocalization_score.raw), r.est=gm_mean(r.est), r.obs=gm_mean(r.obs), Nnear=sum(Nnear), Nfar=sum(Nfar), p.high=pchisq( -2*sum(log(p.high)), 2*n(), lower.tail=FALSE), p.low=pchisq( -2*sum(log(p.low)), 2*n(), lower.tail=FALSE)) %>%
+  ungroup() %>%
+  group_by(cell, annotation_type, far_threshold_bp) %>%
+  mutate(p.high.corr=p.adjust(p.high, method="BH"), p.low.corr=p.adjust(p.low, method="BH")) %>%
+  ungroup() %>%
+  arrange(p.high.corr)
+  return(out)
+}
+```
+
+
+Run on the data. Note that we combine all the delocalization scores (trans, cis at far_threshold_bp = 10kb, 100kb etc..) in a single data frame. 
+```{r}
+
+data_avg <- list(exonsModel=NULL,intronsModel=NULL)
+
+data_avg <- purrr::imap(data_avg, function(x,y){
+  bind_rows(list(
+    deloc_trans = 
+      combine_preds(read_parquet(here('data-output/delocalization',paste0('delocalization_scores.bysample.trans.',y,'.parquet'))) %>% mutate(far_threshold_bp = 0)) %>%
+    relocate(far_threshold_bp, cell, GeneID, annotation_type, name, rna_type, rna_subtype),
+
+    deloc_cis = 
+      combine_preds(read_parquet(here('data-output/delocalization',paste0('delocalization_scores.bysample.cis.',y,'.parquet')))) %>%
+    # dplyr::filter(far_threshold_bp==1e7) %>%
+    # dplyr::select(-far_threshold_bp)) %>%
+   relocate(far_threshold_bp, cell, GeneID, annotation_type, name, rna_type, rna_subtype)), .id='deloc_score_type') %>%
+  mutate(deloc_score_type=factor(deloc_score_type, levels=c("deloc_trans", "deloc_cis"))) %>%
+  arrange(deloc_score_type, p.high.corr)
+})
+```
+
+## Save scores
+
+
+```{r}
+wb <- createWorkbook()
+addWorksheet(wb,"exonsModel")
+addWorksheet(wb,"intronsModel")
+# 
+
+purrr::imap(data_avg, function(x,y) writeData(wb, y, x%>% dplyr::filter(far_threshold_bp %in% c(Inf,1e7) ))) 
+saveWorkbook(wb, here('data-output/delocalization','delocalization_scores.averages.xlsx'), overwrite = TRUE)
+
+purrr::imap(data_avg, function(x,y) write_parquet(x,  here('data-output/delocalization',paste0('delocalization_scores.averages.',y,'.parquet'))))
+```
+
+
+
+## Make a catalog of delocalized RNAs
+```{r}
+deloc_catalog = list(delocalized_cis = data_avg$exonsModel %>% dplyr::filter(far_threshold_bp ==1e7, deloc_score_type == 'deloc_cis', p.high.corr<0.05) %>% arrange(p.high),
+                     delocalized_trans = data_avg$exonsModel %>% dplyr::filter( deloc_score_type == 'deloc_trans', p.high.corr<0.05) %>% arrange(p.high),
+                     ultralocalized_cis = data_avg$exonsModel %>% dplyr::filter(far_threshold_bp ==1e7, deloc_score_type == 'deloc_cis', p.low.corr<0.05) %>% arrange(p.low),
+                     ultralocalized_trans = data_avg$exonsModel %>% dplyr::filter(deloc_score_type == 'deloc_trans', p.low.corr<0.05) %>% arrange(p.low))
+
+wb <- createWorkbook()
+addWorksheet(wb,"delocalized_cis")
+addWorksheet(wb,"delocalized_trans")
+addWorksheet(wb,"ultralocalized_cis")
+addWorksheet(wb,"ultralocalized_trans")
+# 
+
+purrr::imap(deloc_catalog, function(x,y) writeData(wb, y, x  )) 
+saveWorkbook(wb, here('data-output/delocalization','delocalized_catalog.xlsx'), overwrite = TRUE)
+```
+
+
