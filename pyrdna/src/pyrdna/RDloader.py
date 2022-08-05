@@ -58,7 +58,6 @@ def load_RD_data(libs, genes,  smpls=[], loadrna=False, loaddna=True, loadbkg=Tr
             dna={k:{} for k in smpls}
             pbar.update(1)
             for sname in smpls:
-                #s=smplalias[sname]
                 for k, v in dna_to_load.items():
                     cur_msg='DNA:'+sname+":"+k
                     pbar.set_postfix(step=cur_msg, refresh=True)
@@ -69,7 +68,6 @@ def load_RD_data(libs, genes,  smpls=[], loadrna=False, loaddna=True, loadbkg=Tr
         if len(rna_to_load)>0:
             rna={k:{} for k in smpls}
             for sname in smpls:
-                #s=smplalias[sname]
                 for k, v in rna_to_load.items():
                     cur_msg='RNA:'+sname+":"+k
                     pbar.set_postfix(step=cur_msg, refresh=True)
@@ -84,7 +82,6 @@ def load_RD_data(libs, genes,  smpls=[], loadrna=False, loaddna=True, loadbkg=Tr
 
 
             for sname in smpls:
-                #s=smplalias[sname]
                 cur_msg='bkg:'+sname
                 pbar.set_postfix(step=cur_msg, refresh=True)
                 bkg[sname]=pickle.load(open(os.path.join(libs[sname], path_bk), "rb"))
@@ -96,17 +93,13 @@ def load_RD_data(libs, genes,  smpls=[], loadrna=False, loaddna=True, loadbkg=Tr
         if loadmodels:
             cur_msg='Models'
             pbar.set_postfix(step=cur_msg, refresh=True)
-            cismodels={k:{} for k in smplalias.keys()}
+            cismodels={k:{} for k in smpls}
 
             for sname in smpls:
-                #s=smplalias[sname]
                 for t in ['exons','introns']:
-            #         ix="%s_%s"%(s,t)
                     cismodels[sname][t]=pickle.load(open(os.path.join(libs[sname],'pairs/gencondeV29_hg38/%s/analysis/01_flight/cismodel.pickle'%t),'rb'))
 
-        # rd_data={'genes': genes, 'gene_strand_dict':gene_strand_dict, 'intergenes':intergenes, 'dna':dna,'rna':rna,'bkg':bkg, 'cismodel':cismodels, 'intergenes_strand_dict':intergenes_strand_dict, 'smplalias':smplalias}
         genetypes = set(genes.keys())
-        #genes = {gt:allgenes.loc[allgenes['annotation_type']==s].drop('annotation_type', axis=1) for gt in genetypes}
         gene_strand_dict = {gt : {k: (True if v=="-" else False) for k, v in genes[gt].strand.to_dict().items()} for gt in genetypes} 
         rd_data={'genes': genes, 'gene_strand_dict':gene_strand_dict, 'dna':dna,'rna':rna,'bkg':bkg, 'cismodel':cismodels, 'libs':libs}
         pbar.update(1)
