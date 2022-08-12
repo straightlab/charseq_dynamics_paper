@@ -11,8 +11,8 @@
 - [Chromatin association scores](Rmd/visu_chre_score.md)
 - [Delocalization scores](Rmd/visu_delocalization_scores.md)
 - [Differential expression in chromatin associated RNAs](Rmd/visu_DEG.md)
-- [Contactome Dynamics](Rmd/visu_DEG.md)
+- [Contactome Dynamics](Rmd/visu_contactomeDynamics100kb.md)
 - [Comparison to model](Rmd/visu_model.md)
-- [caRNA-gene interactome](Rmd/visu_contactomeDynamics100kb.md)
+- [caRNA-gene interactome](Rmd/visu_genesContactome.md)
 
 
