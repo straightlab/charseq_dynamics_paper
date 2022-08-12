@@ -1,0 +1,258 @@
+---
+title: "Visualization : Contactome dynamics 100kb"
+output:
+  html_document:
+    keep_md: true
+---
+
+
+
+
+
+
+# Load genes and delocalization scores
+
+```r
+allgenes <- read_parquet(here('../rdana/genes/data-output/allgenes_final.parquet'))
+
+delocdata <- read_parquet(here('../rdana/cacoarse/data-output/delocalization_scores.exonsModel.parquet')) #delocalization score
+tscores <- delocdata %>%
+  dplyr::filter(deloc_score_type=='deloc_trans') %>%
+  dplyr::select(GeneID, cell, annotation_type, delocalization_score.calibrated, p.high.corr) %>%
+  dplyr::mutate(isbb = case_when(p.high.corr<0.05 ~ T, T~F))  
+
+bb <- tscores %>% dplyr::filter(isbb==T) %>% pull(GeneID) %>% unique() # keep track of borad binders to remove in all plots
+```
+
+#ES vs DE
+## Load contactome
+
+```r
+load_deseq <- function(data_root="data/forDEseq2022-04-10/deseqOUT", interval_name="5MbCover", cistrans = list(cis = "cisDecay_withbias", trans = "dnabias_leak"), cellOrModel = "Cell"){
+
+  l_eix = list(exons = c("exons","exons"), introns = c("introns","introns"), intergenic = c("intergenic","exons"))
+
+deseq_out <- bind_rows(
+  sapply(names(cistrans), function(h) {bind_rows(lapply(l_eix, function(x){ read_parquet(here(data_root,paste0(interval_name,".", x[[1]],".",cistrans[[h]],".",x[[2]],"Model.",h, "_DESEQout_",cellOrModel,"Enrich_withgeneinfo.parquet")))}), .id='rnatype')}, simplify=F), .id='cistrans')
+  
+
+deseq_out <- deseq_out %>%
+  dplyr::rename(GeneID.src=ENSG.src, GeneID.tgt=ENSG.tgt, annotation_type.src=rnatype) %>%
+  dplyr::select(-c(name.src, name.tgt, type_coarse.src))
+return(deseq_out)
+
+}
+
+longify_contactome <- function(deseq_out, genedata, tgt_def_file=NULL, p_thr=0.05, fc_thr=2){
+  out <- 
+    deseq_out %>%
+    
+     dplyr::select(cistrans, annotation_type.src, GeneID.src, GeneID.tgt, delta, padj.obs.int, log2FoldChange.obs.int) %>%
+      dplyr::rename_with(.fn =  function(h) {stringr::str_remove(h, "\\.int$")}, .cols=ends_with(".int")) %>%
+    
+   pivot_longer(-c(cistrans, annotation_type.src, GeneID.src, GeneID.tgt, delta), names_to=c(".value","cell"), names_pattern="(.*)\\.(...)")
+  
+  out <- out %>%
+      inner_join(genedata %>% rename_all(function(x) paste0(x,".src")), by=c('GeneID.src','annotation_type.src'))
+  
+  if (!is.null(tgt_def_file)){
+    tgt_genes_names <- read_parquet(tgt_def_file) %>%
+      dplyr::rename(GeneID = ENSG ) %>%
+    rename_all(function(x) paste0(x,".tgt"))
+    
+    out<- out %>% left_join(tgt_genes_names, by='GeneID.tgt')
+  }
+  
+  return(out)
+} 
+```
+
+
+```r
+deseq_out_Cell <- load_deseq(data_root="../rdana/contactome/data/forDEseq2022-06-01_cellOnly_noSF/deseqOUT", interval_name="100kbCover", cistrans = list(cis = "cisDecay_withbias", trans = "dnabias_noleak"),  cellOrModel='Cell')
+```
+
+
+
+```r
+contactome_long <- longify_contactome(deseq_out_Cell,
+                                      allgenes %>% dplyr::select(GeneID, annotation_type, name, chr, start, stop, rna_type, rna_subtype),  tgt_def_file =  here('../rdana/contactome/data-raw/100kb_cover.parquet'), p_thr=0.05, fc_thr = 2) 
+```
+
+## Histograms numbers of cell specific contacts
+
+```r
+plot_hist_diffcontact <- function(contactome_long, p_enr=0.05, thr_enr=2, lims=c(0,15)){
+   contactome_long %>%
+    mutate(diff_contact = case_when((padj<p_enr) & (log2FoldChange<(log2(1/thr_enr))) ~'ES', (padj<p_enr) & (log2FoldChange>log2(thr_enr))~'DE', T~'none')) %>%
+  
+  dplyr::count(rna_type.src, annotation_type.src, diff_contact) %>%
+  group_by(annotation_type.src, rna_type.src) %>%
+  mutate(per = n/sum(n)*100) %>%
+  ungroup() %>%
+  dplyr::filter(diff_contact!="none") %>%
+  mutate(diff_contact = factor(diff_contact, levels = c("DE","ES"))) %>%
+ 
+  ggplot(aes(x=rna_type.src, y=per, fill=diff_contact))+
+    geom_col()+
+    scale_fill_manual(values=c( ES="cornflowerblue", DE="gold3"))+
+    theme_publish() +
+    scale_y_continuous(limits = lims, expand = c(0,0)) + 
+   theme(legend.position = "right", legend.direction = "vertical", axis.text.x = element_text(angle=45, hjust=1)) +
+    labs(x="Gene class", y = "% of contacts", fill="Upregulated in") +
+  facet_wrap(~annotation_type.src)->p
+  
+  return(p)
+}
+```
+
+
+
+```r
+mylevels <- c("mRNA","lncRNA","ncRNA")
+p<- plot_hist_diffcontact (contactome_long %>% dplyr::filter(annotation_type.src %in% c('exons', 'introns'), rna_type.src %in% mylevels) %>%
+                             mutate(rna_type.src = factor(rna_type.src, levels = mylevels)), p_enr=0.05, thr_enr=2, lims=c(0,10))
+
+p_fixed <- prettysave(p, here('figures/dynamics/hist_percentCellDiffContacts.pdf'), panel.width = 0.7, panel.height =0.8)
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_col).
+```
+
+```
+## [1] "fig.width=3.7, fig.height=2.1"
+```
+
+```r
+plot_grid(p_fixed)
+```
+
+![](visu_contactomeDynamics100kb_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
+
+
+```r
+mylevels = c('repeat', 'cre','readthrough','antisense','intergenic')
+
+p<- plot_hist_diffcontact (contactome_long %>% dplyr::filter(annotation_type.src %in% c('intergenic'), rna_type.src %in% mylevels) %>%
+                             mutate(rna_type.src = factor(rna_type.src, levels = mylevels)), p_enr=0.05, thr_enr=2, lims=c(0,30))
+
+p_fixed <- prettysave(p, here('figures/dynamics/hist_percentCellDiffContacts.integenic.pdf'), panel.width = 0.7*5/3, panel.height =0.8)
+```
+
+```
+## [1] "fig.width=3.2, fig.height=2.3"
+```
+
+```r
+plot_grid(p_fixed)
+```
+
+![](visu_contactomeDynamics100kb_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
+
+# ES vs DE relative to expression model
+
+## Load contactome
+
+```r
+contactome_expression <- load_deseq(data_root="../rdana/contactome/data/forDEseq2022-05-18_vsexp/deseqOUT", interval_name="100kbCover", cistrans = list(cis = "cisDecay_withbias", trans = "dnabias_noleak"))
+```
+
+
+```r
+longify_contactome_vsexp <- function(deseq_out, genedata, tgt_def_file=NULL){
+  out <- deseq_out %>%
+      dplyr::select(cistrans, annotation_type.src, GeneID.src, GeneID.tgt, delta, padj.ooe.int, log2FoldChange.ooe.int, log2FoldChange.obs.int, log2FoldChange.exp.int) %>%
+      dplyr::rename(log2FoldChange.obs = log2FoldChange.obs.int, padj = padj.ooe.int, log2FoldChange = log2FoldChange.ooe.int, log2FoldChange.exp = log2FoldChange.exp.int)
+  out <- out %>%
+      inner_join(genedata %>% rename_all(function(x) paste0(x,".src")), by=c('GeneID.src','annotation_type.src'))
+  
+  if (!is.null(tgt_def_file)){
+    tgt_genes_names <- read_parquet(tgt_def_file) %>%
+      dplyr::rename(GeneID = ENSG ) %>%
+    rename_all(function(x) paste0(x,".tgt"))
+    
+    out<- out %>% left_join(tgt_genes_names, by='GeneID.tgt')
+  }
+  
+  return(out)
+} 
+```
+
+
+```r
+contactome_expression_long <-longify_contactome_vsexp(contactome_expression,
+                                      allgenes %>% dplyr::select(GeneID, annotation_type, name, chr, start, stop, rna_type, rna_subtype),  tgt_def_file =  here('../rdana/contactome/data-raw/100kb_cover.parquet')) 
+```
+
+
+## Histograms numbers of cell specific contacts
+
+```r
+plot_hist_diffcontact_vsexpression <- function(contactome_expression_long, p_enr=0.05, thr_enr=1.5, lims=c(0,15)){
+   contactome_expression_long %>%
+    mutate(diff_contact = case_when((padj<p_enr) & (log2FoldChange.exp<0) & (log2FoldChange<(log2(1/thr_enr))) ~'ES', (padj<p_enr) & (log2FoldChange.exp>0) & (log2FoldChange>log2(thr_enr))~'DE', T~'none')) %>%
+  
+  dplyr::count(rna_type.src, annotation_type.src, diff_contact) %>%
+  group_by(annotation_type.src, rna_type.src) %>%
+  mutate(per = n/sum(n)*100) %>%
+  ungroup() %>%
+   mutate(annotation_type.src=factor(annotation_type.src), rna_type.src= factor(rna_type.src)) %>%
+   dplyr::filter(diff_contact!="none") %>%
+  mutate(diff_contact=factor(diff_contact, levels = c("ES","DE"))) %>%
+  complete(annotation_type.src, rna_type.src, diff_contact, fill=list(per=0))  %>%
+
+    
+ 
+  ggplot(aes(x=rna_type.src, y=per, fill=diff_contact))+
+    geom_col()+
+    scale_fill_manual(values=c( ES="cornflowerblue", DE="gold3"))+
+    theme_publish() +
+    scale_y_continuous(limits = lims, expand = c(0,0)) + 
+   theme(legend.position = "right", legend.direction = "vertical", axis.text.x = element_text(angle=45, hjust=1)) +
+    labs(x="Gene class", y = "% of contacts", fill="Upregulated in") +
+  facet_wrap(~annotation_type.src)->p
+  
+  return(p)
+}
+```
+
+
+
+```r
+mylevels <- c("mRNA","lncRNA","ncRNA")
+p<- plot_hist_diffcontact_vsexpression (contactome_expression_long %>% dplyr::filter(annotation_type.src %in% c('exons', 'introns'), rna_type.src %in% mylevels) %>%
+                             mutate(rna_type.src = factor(rna_type.src, levels = mylevels)), p_enr=0.05, thr_enr=2, lims=c(0,0.1))
+
+p_fixed <- prettysave(p, here('figures/dynamics/hist_percentCellDiffContacts_overexpression.pdf'), panel.width = 0.7, panel.height =0.8)
+```
+
+```
+## [1] "fig.width=3.8, fig.height=2.1"
+```
+
+```r
+plot_grid(p_fixed)
+```
+
+![](visu_contactomeDynamics100kb_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
+
+
+
+```r
+mylevels = c('repeat', 'cre','readthrough','antisense','intergenic')
+p<- plot_hist_diffcontact_vsexpression (contactome_expression_long %>% dplyr::filter(annotation_type.src %in% c('intergenic'), rna_type.src %in% mylevels) %>%
+                             mutate(rna_type.src = factor(rna_type.src, levels = mylevels)), p_enr=0.05, thr_enr=2, lims=c(0,0.01))
+
+p_fixed <- prettysave(p, here('figures/dynamics/hist_percentCellDiffContacts_overexpression.intergenic.pdf'), panel.width = 0.7*5/3, panel.height =0.8)
+```
+
+```
+## [1] "fig.width=3.6, fig.height=2.3"
+```
+
+```r
+plot_grid(p_fixed)
+```
+
+![](visu_contactomeDynamics100kb_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
