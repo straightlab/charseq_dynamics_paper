@@ -69,6 +69,7 @@ p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 0.1 * nrow(p
 plot_grid(p_fixed)
 ```
 
+
 ```{r, fig.width=3.2, fig.height=2.3}
 p<- type_tallies %>%
   mutate(cell= factor(cell, levels = c("ES","DE"))) %>%
@@ -150,6 +151,27 @@ p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 0.7, panel.h
 plot_grid(p_fixed)
 ```
 
+
+```{r}
+exprdata %>%
+
+dplyr::select(GeneID, annotation_type, rna_type, starts_with("FPM")) %>%
+  #dplyr::mutate(rna_type = factor(rna_type, levels = c("mRNA","lncRNA","ncRNA"))) %>%
+pivot_longer(cols=-c(GeneID, annotation_type, rna_type), names_to = c("cell", "sequencing"),
+names_pattern = "FPM\\.(.*)\\.(.*)",
+values_to = "FPM") %>%
+group_by(cell, sequencing, annotation_type, rna_type) %>%
+  dplyr::filter(sequencing=='char') %>%
+  arrange(desc(FPM)) %>%
+  mutate(rnk = seq(1,n())) %>%
+  mutate(istop = if_else(rnk<11, T, F)) %>%
+  group_by(cell, sequencing, annotation_type, rna_type,istop) %>%
+summarise(across(starts_with("FPM"), function(x) sum(x, na.rm=T))) %>%
+  
+  group_by(cell, sequencing) %>%
+  mutate(per=FPM/sum(FPM)*100) %>%
+  dplyr::filter(rna_type=='lncRNA', istop==F)
+```
 
 ```{r,fig.width=3.3, fig.height=4.9}
 p<- type_tallies %>%
