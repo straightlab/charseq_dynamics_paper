@@ -93,6 +93,32 @@ plot_grid(p_fixed)
 ```
 
 # Census of delocalized RNAs
+
+
+```{r}
+mytypes1  <- c("mRNA","lncRNA")
+
+deloc <- deloc_df %>% 
+  dplyr::filter(annotation_type %in% c('intergenic', 'exons'), FPM>1, deloc_score_type=='cis', rna_type %in% mytypes1) %>%
+  mutate(rna_type = factor(rna_type, levels = rev(mytypes1)), cell=factor(cell, levels=c('ES','DE')))
+
+ deloc %>%
+  mutate(issig = case_when((p.high.corr<0.05) ~ 'broad', (p.low.corr<0.05) ~ 'tight' , T~'none')) %>%
+  
+  dplyr::count(annotation_type, rna_type, issig, cell) %>%
+  group_by(rna_type, cell, annotation_type) %>%
+  mutate(per = n/ sum(n)*100) %>%
+  ungroup() %>%
+  dplyr::filter(issig!="none") %>%
+  mutate(issig = factor(issig, levels = c("tight","broad"))) %>%
+  complete(crossing(rna_type, issig, cell), fill = list(per = 0)) %>%
+  group_by(cell, rna_type) %>%
+  mutate(per_total = sum(per)) %>%
+  ungroup() %>%
+  mutate(per2 = case_when(issig=="tight" ~ per_total, T ~ per)) %>%
+  mutate(alpha2 = case_when(cell=='ES'~0.2, cell=='DE' ~ 1)) 
+```
+
 ```{r, fig.width=7}
 plot_deloc_significant <- function(deloc){
  deloc %>%
@@ -185,6 +211,71 @@ p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.2, 
 plot_grid(p_fixed)
 
 ```
+
+## More census
+
+```{r}
+plot_census_broadbinder<- function(deloc){
+deloc %>%
+  mutate(cell = factor(cell, levels = c("ES","DE"))) %>%
+  mutate(issig = case_when((p.high.corr<0.05) ~ 'broad', (p.low.corr<0.05) ~ 'tight' , T~'none')) %>%
+  
+  dplyr::count(annotation_type, rna_type, issig, cell) %>%
+  group_by(rna_type, cell, annotation_type) %>%
+  mutate(per = n/ sum(n)*100) %>%
+  ungroup() %>%
+  dplyr::filter(issig!="none") %>%
+  mutate(issig = factor(issig, levels = c("tight","broad"))) %>%
+  complete(crossing(rna_type, issig, cell), fill = list(per = 0)) %>%
+  group_by(cell, rna_type) %>%
+  mutate(per_total = sum(per)) %>%
+    
+  dplyr::filter(issig=="broad") %>%
+  ggplot(aes(x=rna_type, y=n, fill=cell))+
+    geom_col(position = "dodge")+
+    scale_fill_manual(values=c( ES="cornflowerblue", DE="gold3"))+
+    theme_publish() +
+    scale_y_continuous( expand = c(0,0)) + 
+   theme(legend.position = "right", legend.direction = "vertical", axis.text.x = element_text(angle=45, hjust=1)) +
+    labs(x=NULL, y = "# of trans-delocalized RNAs") -> p
+  
+  return(p)
+}
+  
+```
+
+
+
+```{r, fig.width=2.6, fig.height=2.1}
+mytypes  <- c('mRNA','lncRNA','snRNA','snoRNA')
+#c("repeat","tRNAderived", "snRNAderived","cre","readthrough","antisense","intergenic")
+
+mydata <- deloc_df %>% 
+  dplyr::filter(annotation_type %in% c('exons'), FPM>1, deloc_score_type=='trans', ambiguous!=2, rna_type %in% mytypes) %>%
+  mutate(rna_type = factor(rna_type, levels = (mytypes)), cell=factor(cell, levels=c('ES','DE'))) 
+
+p <- plot_census_broadbinder(mydata)
+
+fname="hist.num_trans_delocalized.pdf"
+
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.2, panel.height=1.3)
+plot_grid(p_fixed)
+```
+```{r, fig.width=2.6, fig.height=2.1}
+mytypes  <- c("repeat","tRNAderived", "snRNAderived","cre","readthrough","antisense","intergenic")
+
+mydata <- deloc_df %>% 
+  dplyr::filter(annotation_type %in% c('intergenic'), FPM>1, deloc_score_type=='trans', ambiguous!=2, rna_type %in% mytypes) %>%
+  mutate(rna_type = factor(rna_type, levels = (mytypes)), cell=factor(cell, levels=c('ES','DE'))) 
+
+p <- plot_census_broadbinder(mydata)
+
+fname="hist.num_trans_delocalized.pdf"
+
+p_fixed<- prettysave(p, here('figures/delocalization', fname), panel.width=1.2, panel.height=1.3)
+plot_grid(p_fixed)
+```
+
 # Catalog LNCrnas
 
 ## Prepare data

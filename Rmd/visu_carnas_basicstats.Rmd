@@ -222,6 +222,25 @@ fname='annotation_types.barplot.bysequencing.simple.INTERGENIC.pdf'
 p_fixed<- prettysave(p, here('figures/carnas', fname), panel.width= 0.7, panel.height=1.5)
 plot_grid(p_fixed)
 ```
+```{r}
+type_tallies %>% dplyr::filter(sequencing=='char') %>%
+  group_by(cell, sequencing) %>%
+  mutate_if(is.numeric, ~./sum(., na.rm = T)*100) %>%
+  ungroup() %>%
+  mutate(cell=factor(cell, levels = c("ES","DE"))) 
+```
+
+cell type avg
+```{r}
+type_tallies %>% dplyr::filter(sequencing=='char') %>%
+  group_by(cell) %>%
+  mutate_if(is.numeric, ~./sum(., na.rm = T)*100) %>%
+  ungroup() %>%
+  mutate(cell=factor(cell, levels = c("ES","DE"))) %>%
+  group_by(sequencing, rna_type) %>%
+  summarize(FPM = mean(FPM))
+```
+
 
 ```{r, fig.width=3.8, fig.height=2.3}
 p<- type_tallies %>%
@@ -550,6 +569,39 @@ scale_y_continuous(expand = c(0,0)) + theme_publish()+
 plot_grid(p_fixed)
 }
 
+```
+## Counts
+
+Total number of UTLs
+```{r}
+allgenes %>% dplyr::filter(annotation_type=='intergenic') %>% pull(GeneID) %>% unique() %>% length()
+```
+
+Number of exons above 0.1 FPM
+```{r}
+expr_genes %>% dplyr::filter(annotation_type=='exons') %>% 
+  group_by(GeneID, sequencing) %>%
+  summarise(rna_type = rna_type[1], FPM=max(FPM)) %>%
+  ungroup() %>%
+  dplyr::filter(sequencing=='char', FPM>0.1) 
+```
+
+Number of introns above 0.1 FPM
+```{r}
+expr_genes %>% dplyr::filter(annotation_type=='introns') %>% 
+  group_by(GeneID, sequencing) %>%
+  summarise(rna_type = rna_type[1], FPM=max(FPM)) %>%
+  ungroup() %>%
+  dplyr::filter(sequencing=='char', FPM>0.1) 
+```
+
+Number of intergens aboe 0.1 FPM
+```{r}
+expr_intergenes %>% #dplyr::filter(annotation_type=='into') %>% 
+  group_by(GeneID, sequencing) %>%
+  summarise(rna_type = rna_type[1], FPM=max(FPM)) %>%
+  ungroup() %>%
+  dplyr::filter(sequencing=='char', FPM>0.1)
 ```
 
 ### by rna type

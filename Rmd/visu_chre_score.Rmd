@@ -224,7 +224,7 @@ out=list()
 for (cell in c("ES","DE")){
   for (ei in c("exons", "introns")){
 p<- plot_piechart_chaVSrna(chredata %>%
-  dplyr::filter(annotation_type=='exons', rna_type %in% c("mRNA","lncRNA","ncRNA"), ambiguous>-1) %>%
+  dplyr::filter(annotation_type==ei, rna_type %in% c("mRNA","lncRNA","ncRNA"), ambiguous>-1) %>%
   mutate(rna_type = factor(rna_type, levels = c("mRNA","lncRNA","ncRNA"))), 
   ESorDE=cell, thr_enr=3, thr_p=0.05, thr_exp=0.1)
 
