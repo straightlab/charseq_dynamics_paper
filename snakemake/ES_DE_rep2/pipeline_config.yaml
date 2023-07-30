@@ -1,0 +1,212 @@
+# === DEFINE OUTPUT  ===
+run_pairing_modes: ['gencondeV29_hg38']
+run_pairs_types: ['all','novel','intergenic','exons','introns']
+run_samples: ['all']
+
+workdir: ./data
+nreads: -1 #if >0, will run the analysis on the first *nreads* reads. Useful to test the pipeline on a small number of reads (for ex: nreads=10000)
+
+# === SAMPLES DEF FILE  ===
+samples_def_file: samples_def.yaml
+
+# === MEMORY AND CPUS  ===
+max_threads: 8
+max_mem: 120g
+mem_per_cpu: 15
+
+# === PREPROCESSING OPTIONS ===
+read_length: 310
+trimmomatic_options: 2:30:12 SLIDINGWINDOW:10:10 MINLEN:61 #options for trimmomatic
+trimmomatic_filepath: /home/groups/astraigh/Trimmomatic-0.38/trimmomatic-0.38.jar
+pear_options: -p 0.01 -v 20 -n 50 #options for mates merging
+cutoff_len_RNA: 15 #options for length cutoff
+
+decon_config: -q --very-sensitive --norc -x /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/hg38/rRNAs_ncbi
+
+# === ANNOTATIONS FILES ===
+annotations:
+  # chrdb: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/chrNameLength_1-22XYM.txt
+  chrdb: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/chrNameLength_ALL.txt
+  txdb: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/tx_table_posONLY.txt
+  genedb: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/gene_table_complete_NOPARY_withLength.txt
+
+# === SALMON INDEX ===
+  salmon_index: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/SALMONV0.14_index/k21_index
+
+# === INTERNAL CONFIGURATION OF MATE PAIRING MODES (do not change unless you know what you're doing) ===
+mates_pairing_modes: #wc : mates_pairing_mode
+  SE_merge_pear:
+    base: 'split_chimeras/_debridging' 
+    rna: ['readthrough/F.rna', 'readthrough/R.rna', 'mergedPairs_pear/F.rna', 'mergedPairs_pear/R.rna', 'unmergedPairs_pear/0R.rna.2.revcomp', 'unmergedPairs_pear/F0.rna.1']
+    dna: ['readthrough/F.dna', 'readthrough/R.dna', 'mergedPairs_pear/F.dna', 'mergedPairs_pear/R.dna', 'unmergedPairs_pear/0R.dna', 'unmergedPairs_pear/F0.dna.1']
+  SE_mate1:
+    base: 'split_chimeras/_debridging' 
+    rna: ['readthrough/F.rna', 'readthrough/R.rna', 'allPairs/0R.rna.2.revcomp', 'allPairs/F0.rna.1']
+    dna: ['readthrough/F.dna', 'readthrough/R.dna', 'allPairs/0R.dna', 'allPairs/F0.dna.1']
+  SE_readthrough:
+    base: 'split_chimeras/_debridging' 
+    rna: ['readthrough/F.rna', 'readthrough/R.rna']
+    dna: ['readthrough/F.dna', 'readthrough/R.dna']
+  SE_F:
+    base: 'split_chimeras/_debridging' 
+    rna: ['allPairs/F0.rna.1']
+    dna: ['allPairs/F0.dna.1']
+  SE_R:
+    base: 'split_chimeras/_debridging' 
+    rna: ['allPairs/0R.rna.2.revcomp']
+    dna: ['allPairs/0R.dna']
+  
+
+# === ALIGNER CONFIGURATIONS ALIASES ===
+bowtie_configurations:
+  hg38_unmasked:
+    S: --very-sensitive -x /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/BOWTIE2genome/genome
+    P: -X 500 --very-sensitive -x /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/BOWTIE2genome/genome
+
+star_configurations:
+  gencodeV29:
+    # fq: split_chimeras/SE_merge_pear/long.decon/rna.fastq.gz
+    S: --genomeDir /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/STARgenomeV29gff3_2.7 --outFilterMultimapNmax 10 --outSAMmultNmax 10 --outSAMattributes All --outReadsUnmapped None --outSAMunmapped Within --outMultimapperOrder Random --quantTranscriptomeBan Singleend 
+    P: --genomeDir /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/STARgenomeV29 --outFilterMultimapNmax 10 --outSAMmultNmax 10 --outSAMattributes All --outReadsUnmapped None --outSAMunmapped Within --outSAMtype BAM Unsorted --outMultimapperOrder Random
+    annot: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/genconde.v29.tableGENES.withStrand.txt
+    exons: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/gencode.v29.primary_assembly.annotation.gff3.pickle
+    transcriptome_fa: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/gencode.v29.all.fa
+  gencodeV29_genebodies:
+    # fq: split_chimeras/SE_merge_pear/long.decon/rna.fastq.gz
+    S: --genomeDir /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/STARgenomeV29gff3_GENEBODIES_NOPARY_2.7 --outFilterMultimapNmax 10 --outSAMmultNmax 10 --outSAMattributes All --outReadsUnmapped None --outSAMunmapped Within --outMultimapperOrder Random --outSJfilterOverhangMin -1 -1 -1 -1 --outFilterIntronMotifs RemoveNoncanonical --quantTranscriptomeBan Singleend --alignIntronMax 21 
+    annot: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/genconde.v29.tableGENES.withStrand_GENEBODIES.txt
+    exons: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/gencode.v29.primary_assembly.annotation.GENEBODIES_PARYok.gff3.pickle
+    transcriptome_fa:  /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/gencode.v29.NOPARY.genebodies.fa
+
+# === DNA/RNA ALIGNMENT MODES ===
+dna_alignment_modes:
+  bowtie_hg38:
+    fq: split_chimeras/SE_merge_pear/long.decon/dna.fastq.gz 
+    config: hg38_unmasked
+  bowtie_hg38_mate1:
+    fq: split_chimeras/SE_mate1/long.decon/dna.fastq.gz 
+    config: hg38_unmasked
+  bowtie_hg38_readthrough:
+    fq: split_chimeras/SE_readthrough/long.decon/dna.fastq.gz 
+    config: hg38_unmasked
+  bowtie_hg38_F:
+    fq: split_chimeras/SE_F/long.decon/dna.fastq.gz 
+    config: hg38_unmasked
+  bowtie_hg38_R:
+    fq: split_chimeras/SE_R/long.decon/dna.fastq.gz 
+    config: hg38_unmasked
+  bowtie_hg38_rRNA:
+    fq: split_chimeras/SE_merge_pear/long.contaminants/dna.fastq.gz 
+    config: hg38_unmasked
+  
+rna_alignment_modes:
+  star_gencodeV29:
+    fq: split_chimeras/SE_merge_pear/long.decon/rna.fastq.gz
+    config: gencodeV29
+    alignment_mode_genebodies: _star_gencodeV29_genebodies
+  _star_gencodeV29_genebodies:
+    fq: split_chimeras/SE_merge_pear/long.decon/rna.fastq.gz
+    config: gencodeV29_genebodies
+  star_gencodeV29_mate1:
+    fq: split_chimeras/SE_mate1/long.decon/rna.fastq.gz
+    config: gencodeV29
+    alignment_mode_genebodies: _star_gencodeV29_genebodies_mate1
+  _star_gencodeV29_genebodies_mate1:
+    fq: split_chimeras/SE_mate1/long.decon/rna.fastq.gz
+    config: gencodeV29_genebodies
+  star_gencodeV29_readthrough:
+    fq: split_chimeras/SE_readthrough/long.decon/rna.fastq.gz
+    config: gencodeV29
+    alignment_mode_genebodies: _star_gencodeV29_genebodies_readthrough
+  _star_gencodeV29_genebodies_readthrough:
+    fq: split_chimeras/SE_readthrough/long.decon/rna.fastq.gz
+    config: gencodeV29_genebodies
+  star_gencodeV29_F:
+    fq: split_chimeras/SE_F/long.decon/rna.fastq.gz
+    config: gencodeV29
+    alignment_mode_genebodies: _star_gencodeV29_genebodies_F
+  _star_gencodeV29_genebodies_F:
+    fq: split_chimeras/SE_F/long.decon/rna.fastq.gz
+    config: gencodeV29_genebodies
+  star_gencodeV29_R:
+    fq: split_chimeras/SE_R/long.decon/rna.fastq.gz
+    config: gencodeV29
+    alignment_mode_genebodies: _star_gencodeV29_genebodies_R
+  _star_gencodeV29_genebodies_R:
+    fq: split_chimeras/SE_R/long.decon/rna.fastq.gz
+    config: gencodeV29_genebodies
+
+# === PAIRING MODES ===
+pairing_modes:
+  gencondeV29_hg38:
+    rna: star_gencodeV29
+    dna: bowtie_hg38
+    pairix_header: '/oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/pairix_header_mode1.txt'
+    pairing_options: '--reducemmap 2'
+    alignment_types:
+      exons: bytype/rna.exons.bam
+      introns: bytype/rna.introns.bam
+      intergenic: bytype/rna.intergenic.bam
+      all: bytype/rna.all.bam
+      novel: bytype/rna.novel.bam
+      toomany: bytype/rna.toomany.bam
+  gencondeV29_hg38_mate1:
+    rna: star_gencodeV29_mate1
+    dna: bowtie_hg38_mate1
+    pairix_header: '/oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/pairix_header_mode1.txt'
+    pairing_options: '--reducemmap 2'
+    alignment_types:
+      exons: bytype/rna.exons.bam
+      introns: bytype/rna.introns.bam
+      intergenic: bytype/rna.intergenic.bam
+      all: bytype/rna.all.bam
+      novel: bytype/rna.novel.bam
+      toomany: bytype/rna.toomany.bam
+  gencondeV29_hg38_readthrough:
+    rna: star_gencodeV29_readthrough
+    dna: bowtie_hg38_readthrough
+    pairix_header: '/oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/pairix_header_mode1.txt'
+    pairing_options: '--reducemmap 2'
+    alignment_types:
+      exons: bytype/rna.exons.bam
+      introns: bytype/rna.introns.bam
+      intergenic: bytype/rna.intergenic.bam
+      all: bytype/rna.all.bam
+      novel: bytype/rna.novel.bam
+      toomany: bytype/rna.toomany.bam
+  gencondeV29_hg38_F:
+    rna: star_gencodeV29_F
+    dna: bowtie_hg38_F
+    pairix_header: '/oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/pairix_header_mode1.txt'
+    pairing_options: '--reducemmap 2'
+    alignment_types:
+      exons: bytype/rna.exons.bam
+      introns: bytype/rna.introns.bam
+      intergenic: bytype/rna.intergenic.bam
+      all: bytype/rna.all.bam
+      novel: bytype/rna.novel.bam
+      toomany: bytype/rna.toomany.bam
+  gencondeV29_hg38_R:
+    rna: star_gencodeV29_R
+    dna: bowtie_hg38_R
+    pairix_header: '/oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/pairix_header_mode1.txt'
+    pairing_options: '--reducemmap 2'
+    alignment_types:
+      exons: bytype/rna.exons.bam
+      introns: bytype/rna.introns.bam
+      intergenic: bytype/rna.intergenic.bam
+      all: bytype/rna.all.bam
+      novel: bytype/rna.novel.bam
+      toomany: bytype/rna.toomany.bam
+
+
+salmon_alignment_modes:
+  salmon_gencodeV29:
+    fq: split_chimeras/SE_merge_pear/long.decon/rna.fastq.gz
+    params: -l SF --validateMappings 
+    salmon_index: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/SALMONV0.14_index/k21_index
+  
+blacklist_bed: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/hg38-blacklist.v2.chr1-Xonly.sorted.bed
+
+chromosomesFile: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/chrNameLength_ALL.txt
+

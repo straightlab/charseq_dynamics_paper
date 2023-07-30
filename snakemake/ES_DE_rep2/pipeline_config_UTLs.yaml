@@ -1,0 +1,53 @@
+# === DEFINE OUTPUT  ===
+run_pairing_modes: ['strngtieCharOnly_hg38']
+run_pairs_types: ['exons']
+run_samples: ['TMF2_Rep2B_ES','TMF3_Rep2A_DE']
+
+workdir: ./data
+nreads: -1 #if >0, will run the analysis on the first *nreads* reads. Useful to test the pipeline on a small number of reads (for ex: nreads=10000)
+
+# === SAMPLES DEF FILE  ===
+samples_def_file: samples_def.yaml
+
+# === MEMORY AND CPUS  ===
+max_threads: 8
+max_mem: 120g
+mem_per_cpu: 15
+
+
+# === ANNOTATIONS FILES ===
+annotations:
+  # chrdb: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/chrNameLength_1-22XYM.txt
+  chrdb: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/chrNameLength_ALL.txt
+  txdb: /home/groups/astraigh/differentiation_charseq_paper/notebooks/charles/13_intergenic/data/charOnly/intergenic.charOnly.merged.TXDB.txt
+  genedb: /home/groups/astraigh/differentiation_charseq_paper/notebooks/charles/13_intergenic/data/charOnly/intergenic.charOnly.merged.GENESDB.txt
+
+
+# === ALIGNER CONFIGURATIONS ALIASES ===
+
+star_configurations:
+  strngtie_charOnly:
+    # fq: split_chimeras/SE_merge_pear/long.decon/rna.fastq.gz
+    S: --genomeDir /home/groups/astraigh/differentiation_charseq_paper/notebooks/charles/13_intergenic/data/charOnly/STAR_charOnlySTRGTIE_index --outFilterMultimapNmax 10 --outSAMmultNmax 10 --outSAMattributes All --outReadsUnmapped None --outSAMunmapped Within --outMultimapperOrder Random --quantTranscriptomeBan Singleend 
+    P: --genomeDir /home/groups/astraigh/differentiation_charseq_paper/notebooks/charles/13_intergenic/data/charOnly/STAR_charOnlySTRGTIE_index --outFilterMultimapNmax 10 --outSAMmultNmax 10 --outSAMattributes All --outReadsUnmapped None --outSAMunmapped Within --outSAMtype BAM Unsorted --outMultimapperOrder Random
+    annot: /home/groups/astraigh/differentiation_charseq_paper/notebooks/charles/13_intergenic/data/charOnly/intergenic.charOnly.merged.tableTX.txt
+    exons: /home/groups/astraigh/differentiation_charseq_paper/notebooks/charles/13_intergenic/data/charOnly/intergenic.charOnly.annotation.gff3.pickle
+    transcriptome_fa: /home/groups/astraigh/differentiation_charseq_paper/notebooks/charles/13_intergenic/data/charOnly/intergenic.charOnly.merged.fa
+
+rna_alignment_modes:
+  strngtie_charOnly:
+    fq: split_chimeras/SE_merge_pear/long.decon/rna.fastq.gz
+    config: strngtie_charOnly
+    alignment_mode_parent: star_gencodeV29
+
+# === PAIRING MODES ===
+pairing_modes:
+  strngtieCharOnly_hg38:
+    rna: strngtie_charOnly
+    dna: bowtie_hg38
+    pairix_header: '/oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/pairix_header_mode1.txt'
+    pairing_options: '--reducemmap 2'
+    alignment_types:
+      exons: bytype/rna.exons.bam
+
+blacklist_bed: /oak/stanford/groups/astraigh/charseq2.0/genomes/hsapiens/grch38_foralign/hg38-blacklist.v2.chr1-Xonly.sorted.bed

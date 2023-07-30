@@ -1,0 +1,14 @@
+# === SAMPLES DEFINITION ===
+data_root: /oak/stanford/groups/astraigh/charseq2.0/data/NOVCHAR1_novaseq/C202SC19060279/raw_data
+samples:
+  TFONM2_ES:
+    PE1: hESCPacI/hESCPacI_USPD16100651-2_HL3LWDSXX_L3_1.fq.gz
+    PE2: hESCPacI/hESCPacI_USPD16100651-2_HL3LWDSXX_L3_2.fq.gz
+    clip: /share/PI/astraigh/charseq2.0/resources/nebNEXT_ix2_clipping.fa
+  TGNQ5_DE:
+    PE1: TGNQ5_DE/TGNQ5_DE_USPD16100651-14_HL3LWDSXX_L3_1.fq.gz
+    PE2: TGNQ5_DE/TGNQ5_DE_USPD16100651-14_HL3LWDSXX_L3_2.fq.gz
+    clip: /share/PI/astraigh/charseq2.0/resources/nebNEXT_ix14_clipping.fa
+
+bridgeF: AANNNAAACCGGCGTCCAAG #default bridgeF, overwritten by the sample specific definition if any
+bridgeR: CTTGGACGCCGGTTTNNNTT #default bridgeR, overwritten by the sample specific definition if any

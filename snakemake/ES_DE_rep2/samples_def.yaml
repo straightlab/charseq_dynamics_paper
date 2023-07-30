@@ -1,0 +1,14 @@
+# === SAMPLES DEFINITION ===
+data_root: /oak/stanford/groups/astraigh/charseq2.0/data/novchar2/H202SC19102514/Rawdata
+samples:
+  TMF2_Rep2B_ES:
+    PE1: Rep2B_ES/Rep2B_ES_CKDL190141494-1a-AK1846-AK2161_HV3L5DSXX_L2_1.fq.gz
+    PE2: Rep2B_ES/Rep2B_ES_CKDL190141494-1a-AK1846-AK2161_HV3L5DSXX_L2_2.fq.gz
+    clip: /share/PI/astraigh/charseq2.0/resources/simple_clipping.fa
+  TMF3_Rep2A_DE:
+    PE1: Rep2A_DE/Rep2A_DE_CKDL190141494-1a-AK1868-AK1852_HV3L5DSXX_L2_1.fq.gz
+    PE2: Rep2A_DE/Rep2A_DE_CKDL190141494-1a-AK1868-AK1852_HV3L5DSXX_L2_2.fq.gz
+    clip: /share/PI/astraigh/charseq2.0/resources/simple_clipping.fa
+
+bridgeF: AANNNAAACCGGCGTCCAAG #default bridgeF, overwritten by the sample specific definition if any
+bridgeR: CTTGGACGCCGGTTTNNNTT #default bridgeR, overwritten by the sample specific definition if any
