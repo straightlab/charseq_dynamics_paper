@@ -1,0 +1,26 @@
+#!/bin/bash
+function usage {
+    echo "usage: pairs2bed <mode> <in>"
+		echo "mode: -dna for bed file of dna features, -rna for rna features"
+    exit 1
+}
+
+if [ $# -lt 1 ]; then
+	usage
+fi
+
+input_file="${2:-/dev/stdin}"
+
+case "$1" in
+  -h )
+		usage
+		;;
+	-dna )
+		awk -F $'\t' 'BEGIN{OFS=FS;} (/^#/){next;} {print $4, $20, $21, $1, $9, $7, substr($2,3), $18, $19, $1, $8, $6}' "$input_file"
+		;;
+	-rna )
+		awk -F $'\t' 'BEGIN{OFS=FS;} (/^#/){next;} {print substr($2,3), $18, $19, $1, $8, $6, $4, $20, $21, $9, $7}' "$input_file"
+	 	;;
+	*)
+	usage
+esac
